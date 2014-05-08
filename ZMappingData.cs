@@ -471,6 +471,38 @@ namespace CodeD.Data
             int stride = bitmapData.Stride;
             int pos, number;
 
+            Func<int, int, int> calcColor = CreateFormula(min, max, convertMode);
+
+            for (int x = 0; x < xSize; x++)
+            {
+                for (int y = 0; y < ySize; y++)
+                {
+                    pos = x * 3 + stride * y;
+                    Color _color;
+                    if (data[x, y] > max || data[x, y] < min)
+                    {
+                        _color = OutOfRangeColor;
+                    }
+                    else
+                    {
+                        number = calcColor(x, y);
+                        if (number > 765 || number < 0) number = 0;
+
+                        _color = color[number];
+                    }
+
+                    Marshal.WriteByte(adr, pos, _color.B);
+                    Marshal.WriteByte(adr, pos + 1, _color.G);
+                    Marshal.WriteByte(adr, pos + 2, _color.R);
+                }
+            }
+
+            bitmap.UnlockBits(bitmapData);
+            return bitmap;
+        }
+
+        private Func<int, int, int> CreateFormula(double? min, double? max, ConvertMode convertMode)
+        {
             Func<int, int, int> calcColor;
             switch (convertMode)
             {
@@ -478,41 +510,16 @@ namespace CodeD.Data
                     calcColor = (x, y) => { return (int)((data[x, y] - min) / (max - min) * 764); };
                     break;
                 case ConvertMode.log:
-                    calcColor = (x,y) => {return (int)(Math.Log(data[x, y] - (double)min + 1) / Math.Log((double)(max - min)) * 764);};
+                    calcColor = (x, y) => { return (int)(Math.Log(data[x, y] - (double)min + 1) / Math.Log((double)(max - min)) * 764); };
                     break;
                 case ConvertMode.ln:
-                    calcColor = (x,y) =>{return (int)(Math.Log10(data[x, y] - (double)min + 1) / Math.Log10((double)(max - min)) * 764);};
+                    calcColor = (x, y) => { return (int)(Math.Log10(data[x, y] - (double)min + 1) / Math.Log10((double)(max - min)) * 764); };
                     break;
                 default:
                     throw new ArgumentException("");
             }
 
-            for (int x = 0; x < xSize; x++)
-            {
-                for (int y = 0; y < ySize; y++)
-                {
-                    pos = x * 3 + stride * y;
-
-                    if (data[x, y] >= max || data[x, y] <= min)
-                    {
-                        Marshal.WriteByte(adr, pos, OutOfRangeColor.B);
-                        Marshal.WriteByte(adr, pos + 1, OutOfRangeColor.G);
-                        Marshal.WriteByte(adr, pos + 2, OutOfRangeColor.R);
-                    }
-                    else
-                    {
-                        number = calcColor(x, y);
-                        if (number > 765 || number < 0) number = 0;
-
-                        Marshal.WriteByte(adr, pos, color[number].B);
-                        Marshal.WriteByte(adr, pos + 1, color[number].G);
-                        Marshal.WriteByte(adr, pos + 2, color[number].R);
-                    }
-                }
-            }
-
-            bitmap.UnlockBits(bitmapData);
-            return bitmap;
+            return calcColor;
         }
 
         /// <summary>
