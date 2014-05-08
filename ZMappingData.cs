@@ -5,7 +5,6 @@ using System.IO;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Drawing;
-using System.Collections;
 using G_PROJECT;
 
 namespace CodeD.Data
@@ -68,6 +67,8 @@ namespace CodeD.Data
         static Color[] color;
         public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite};
         public enum ConvertMode { None, ln, log };
+
+        public Color OutOfRangeColor { get; set; }
 
         public int XSize
         {
@@ -314,8 +315,6 @@ namespace CodeD.Data
             return ToBitmap(null, null, colorMode);
         }
 
-
-
         /// <summary>
         /// 最小値・最大値, ColorModeを指定してBitmapに変換<br>
         /// ApplicationException: 不正なColorMode指定時、bitmap作成失敗時
@@ -327,7 +326,7 @@ namespace CodeD.Data
         {
             return ToBitmap(min, max, colorMode, ConvertMode.None);
         }
-        public Bitmap ToBitmap(double? min, double? max, ColorMode colorMode, ConvertMode covertMode)
+        public Bitmap ToBitmap(double? min, double? max, ColorMode colorMode, ConvertMode convertMode)
         {
             #region Colormapの作成
             color = new Color[765];
@@ -376,6 +375,8 @@ namespace CodeD.Data
 
             try
             {
+                if (OutOfRangeColor != null) return CreateBitmapWithOutOfRangeColor(min,max,convertMode);
+
                 Bitmap bitmap = new Bitmap(xSize, ySize, PixelFormat.Format24bppRgb);
                 Rectangle rectangle = new Rectangle(0, 0, xSize , ySize);
                 BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
@@ -384,7 +385,7 @@ namespace CodeD.Data
                 int stride = bitmapData.Stride;
                 int pos,number;
 
-                switch (covertMode)
+                switch (convertMode)
                 {
                     case ConvertMode.None:
                         for (int x = 0; x < xSize; x++)
@@ -458,6 +459,60 @@ namespace CodeD.Data
             {
                 throw new ApplicationException("Bitmapの作成に失敗しました"　+ Environment.NewLine + e.Source + e.StackTrace);
             }
+        }
+
+        private Bitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
+        {
+            Bitmap bitmap = new Bitmap(xSize, ySize, PixelFormat.Format24bppRgb);
+            Rectangle rectangle = new Rectangle(0, 0, xSize, ySize);
+            BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+
+            IntPtr adr = bitmapData.Scan0;
+            int stride = bitmapData.Stride;
+            int pos, number;
+
+            Func<int, int, int> calcColor;
+            switch (convertMode)
+            {
+                case ConvertMode.None:
+                    calcColor = (x, y) => { return (int)((data[x, y] - min) / (max - min) * 764); };
+                    break;
+                case ConvertMode.log:
+                    calcColor = (x,y) => {return (int)(Math.Log(data[x, y] - (double)min + 1) / Math.Log((double)(max - min)) * 764);};
+                    break;
+                case ConvertMode.ln:
+                    calcColor = (x,y) =>{return (int)(Math.Log10(data[x, y] - (double)min + 1) / Math.Log10((double)(max - min)) * 764);};
+                    break;
+                default:
+                    throw new ArgumentException("");
+            }
+
+            for (int x = 0; x < xSize; x++)
+            {
+                for (int y = 0; y < ySize; y++)
+                {
+                    pos = x * 3 + stride * y;
+
+                    if (data[x, y] >= max || data[x, y] <= min)
+                    {
+                        Marshal.WriteByte(adr, pos, OutOfRangeColor.B);
+                        Marshal.WriteByte(adr, pos + 1, OutOfRangeColor.G);
+                        Marshal.WriteByte(adr, pos + 2, OutOfRangeColor.R);
+                    }
+                    else
+                    {
+                        number = calcColor(x, y);
+                        if (number > 765 || number < 0) number = 0;
+
+                        Marshal.WriteByte(adr, pos, color[number].B);
+                        Marshal.WriteByte(adr, pos + 1, color[number].G);
+                        Marshal.WriteByte(adr, pos + 2, color[number].R);
+                    }
+                }
+            }
+
+            bitmap.UnlockBits(bitmapData);
+            return bitmap;
         }
 
         /// <summary>
