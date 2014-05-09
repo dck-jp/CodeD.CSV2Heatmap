@@ -329,32 +329,7 @@ namespace CodeD.Data
         public Bitmap ToBitmap(double? min, double? max, ColorMode colorMode, ConvertMode convertMode)
         {
             CreateColorMap(colorMode);
-
-            #region 最大値・最小値を設定
-            if (max == null)
-            {
-                max = double.MinValue;
-                foreach (double element in data)
-                {
-                    if (max < element)
-                    {
-                        max = element;
-                    }
-                }
-            }
-            if (min == null)
-            {
-                min = double.MaxValue;
-                foreach (double element in data)
-                {
-                    if (min > element)
-                    {
-                        min = element;
-                    }
-                }
-
-            }
-            #endregion
+            SetMinMaxValue(ref min, ref max);
 
             try
             {
@@ -391,6 +366,21 @@ namespace CodeD.Data
             catch(Exception e)
             {
                 throw new ApplicationException("Bitmapの作成に失敗しました"　+ Environment.NewLine + e.Source + e.StackTrace);
+            }
+        }
+
+        private void SetMinMaxValue(ref double? min, ref double? max)
+        {
+            if (max == null)
+            {
+                max = double.MinValue;
+                foreach (double element in data) { if (max < element) { max = element; } }
+            }
+
+            if (min == null)
+            {
+                min = double.MaxValue;
+                foreach (double element in data) { if (min > element) { min = element; } }
             }
         }
 
