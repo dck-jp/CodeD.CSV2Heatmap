@@ -12,49 +12,6 @@ namespace CodeD.Data
     /// <summary>
     /// ZMappingDataクラス
     /// (弐次元配列データ可視化・簡易画像処理クラス)
-    /// TODO:
-    /// [x,y]を[y,x]に
-    /// 
-    /// last modified:
-    /// 10/12/10
-    /// + log, lnで画像表示機能追加
-    /// 10/11/28
-    /// + UTF１６以外のファイルも読めるように（多種Encodingの読み込み可能に）
-    /// - なんか色々見直し
-    /// 10/07/11
-    /// + ファイルパース処理をマルチコア対応
-    /// 10/01/25
-    /// + ヘッダ部分判定機能の追加
-    /// + メンバ変数にヘッダ追加
-    /// 09/12/16
-    /// ! ファイル読み込み時、非数(NaN)や数値以外がデータに含まれていた場合、"NaN"に置き換えるように
-    /// + コンストラクタ追加、コードリファイン
-    /// + 任意角回転追加
-    /// 09/12/15
-    /// - ファイル読み込み時、非数(NaN)や数値以外がデータに含まれていた場合、0に置き換えるように
-    /// - Bitmap生成時、計算誤差でnumberが不正な値になった場合に0を代入するように
-    /// - BlackPurple -> BlackPurpleWhite に
-    /// 09/12/12
-    /// - コンストラクタの整理
-    /// - カラーモード実装
-    /// - 回転メソッドについて非破壊であることを示すためGet~()に改名
-    /// - ConvertToBitmap()削除
-    /// - ファイル出力時のバグ修正
-    /// 09/12/08
-    /// + 区切り文字対応 , \t \sに
-    /// 09/11/13
-    /// + ToBitmap() 失敗時、例外をthrow
-    /// 09/10/24
-    /// - パーサー部分改変(\s区切りの場合)
-    /// 09/10/10
-    /// - SaveZMap() -> SaveAs() 改名
-    /// 09/09/20
-    /// - 列(column)と行(row)間違えてたのを修正
-    /// 09/09/18
-    /// - ToBitmap()リファイン(ConvertToBitmap()も下方互換性のため残存)
-    /// 09/09/17
-    /// - ファイルロード時、\t区切りにも対応
-    /// 09/08/19
     /// </summary>
 
     public class ZMappingData
@@ -69,6 +26,7 @@ namespace CodeD.Data
         public enum ConvertMode { None, ln, log };
 
         public Color OutOfRangeColor { get; set; }
+        public bool EnablesOutOfRangeColor { get; set; }
 
         public int XSize
         {
@@ -128,6 +86,7 @@ namespace CodeD.Data
             xSize = data.GetLength(0);
             ySize = data.GetLength(1);
             pixelSize = 0;
+            EnablesOutOfRangeColor = false;
         }
         public ZMappingData(double[,] data, double pixelSize)
         {
@@ -135,16 +94,19 @@ namespace CodeD.Data
             xSize = data.GetLength(0);
             ySize = data.GetLength(1);
             this.pixelSize = pixelSize;
+            EnablesOutOfRangeColor = false;
         }
         public ZMappingData(string filename)
         {
             ParseZMapFile(filename);
             pixelSize = 0;
+            EnablesOutOfRangeColor = false;
         }
         public ZMappingData(string filename, double pixelSize)
         {
             ParseZMapFile(filename);
             this.pixelSize = pixelSize;
+            EnablesOutOfRangeColor = false;
         }
 
         /// <summary>
@@ -333,7 +295,7 @@ namespace CodeD.Data
 
             try
             {
-                if (OutOfRangeColor != null) return CreateBitmapWithOutOfRangeColor(min,max,convertMode);
+                if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min,max,convertMode);
 
                 Bitmap bitmap = new Bitmap(xSize, ySize, PixelFormat.Format24bppRgb);
                 Rectangle rectangle = new Rectangle(0, 0, xSize , ySize);
@@ -351,7 +313,7 @@ namespace CodeD.Data
                     {
                         pos = x * 3 + stride * y;
                         number = calcColor(x, y);
-                        if (number > 765) { number = 764; }
+                        if (number > 764) { number = 764; }
                         else if (number < 0) { number = 0; }
                         var _color = color[number];
                         Marshal.WriteByte(adr, pos, _color.B);
