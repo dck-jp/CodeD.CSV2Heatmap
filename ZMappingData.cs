@@ -328,24 +328,7 @@ namespace CodeD.Data
         }
         public Bitmap ToBitmap(double? min, double? max, ColorMode colorMode, ConvertMode convertMode)
         {
-            #region Colormapの作成
-            color = new Color[765];
-            switch (colorMode)
-            {
-                case ColorMode.Rainbow:
-                    SetRainbowColors(ref color);
-                    break;
-                case ColorMode.Monochorome:
-                    SetMonochromeColors(ref color);
-                    break;
-                case ColorMode.BlackPurpleWhite:
-                    SetBlackPurpleWhiteColors(ref color);
-                    break;
-                default:
-                    throw new ApplicationException("不正なColorModeが指定されました。");
-            };
-
-            #endregion
+            CreateColorMap(colorMode);
 
             #region 最大値・最小値を設定
             if (max == null)
@@ -385,80 +368,50 @@ namespace CodeD.Data
                 int stride = bitmapData.Stride;
                 int pos,number;
 
-                switch (convertMode)
+                Func<int, int, int> calcColor = CreateFormula(min, max, convertMode);
+
+                for (int x = 0; x < xSize; x++)
                 {
-                    case ConvertMode.None:
-                        for (int x = 0; x < xSize; x++)
-                        {
-                            for (int y = 0; y < ySize; y++)
-                            {
-                                if (data[x, y] >= max) number = 764;
-                                else if (data[x, y] <= min) number = 0;
-                                else number = (int)((data[x, y] - min) / (max - min) * 764);
-
-                                if (number > 765 || number < 0) number = 0;
-
-
-                                pos = x * 3 + stride * y;
-
-                                Marshal.WriteByte(adr, pos, color[number].B);
-                                Marshal.WriteByte(adr, pos + 1, color[number].G);
-                                Marshal.WriteByte(adr, pos + 2, color[number].R);
-                            }
-                        }
-                        break;
-
-                    case ConvertMode.ln:
-                        for (int x = 0; x < xSize; x++)
-                        {
-                            for (int y = 0; y < ySize; y++)
-                            {
-                                if (data[x, y] >= max) number = 764;
-                                else if (data[x, y] <= min) number = 0;
-                                else number = (int)(Math.Log10(data[x, y] - (double)min + 1) / Math.Log10((double)(max - min)) * 764);
-
-                                if (number > 765 || number < 0) number = 0;
-
-
-                                pos = x * 3 + stride * y;
-
-                                Marshal.WriteByte(adr, pos, color[number].B);
-                                Marshal.WriteByte(adr, pos + 1, color[number].G);
-                                Marshal.WriteByte(adr, pos + 2, color[number].R);
-                            }
-                        }
-                        break;
-
-                    case ConvertMode.log:
-                        for (int x = 0; x < xSize; x++)
-                        {
-                            for (int y = 0; y < ySize; y++)
-                            {
-                                if (data[x, y] >= max) number = 764;
-                                else if (data[x, y] <= min) number = 0;
-                                else number = (int)(Math.Log(data[x, y] - (double)min + 1) / Math.Log((double)(max - min)) * 764);
-
-                                if (number > 765 || number < 0) number = 0;
-
-
-                                pos = x * 3 + stride * y;
-
-                                Marshal.WriteByte(adr, pos, color[number].B);
-                                Marshal.WriteByte(adr, pos + 1, color[number].G);
-                                Marshal.WriteByte(adr, pos + 2, color[number].R);
-                            }
-                        }
-                        break;
+                    for (int y = 0; y < ySize; y++)
+                    {
+                        pos = x * 3 + stride * y;
+                        number = calcColor(x, y);
+                        if (number > 765) { number = 764; }
+                        else if (number < 0) { number = 0; }
+                        var _color = color[number];
+                        Marshal.WriteByte(adr, pos, _color.B);
+                        Marshal.WriteByte(adr, pos + 1, _color.G);
+                        Marshal.WriteByte(adr, pos + 2, _color.R);
+                    }
                 }
 
                 bitmap.UnlockBits(bitmapData);
-
                 return bitmap;
             }
             catch(Exception e)
             {
                 throw new ApplicationException("Bitmapの作成に失敗しました"　+ Environment.NewLine + e.Source + e.StackTrace);
             }
+        }
+
+        private void CreateColorMap(ColorMode colorMode)
+        {
+            color = new Color[765];
+            switch (colorMode)
+            {
+                case ColorMode.Rainbow:
+                    SetRainbowColors(ref color);
+                    break;
+                case ColorMode.Monochorome:
+                    SetMonochromeColors(ref color);
+                    break;
+                case ColorMode.BlackPurpleWhite:
+                    SetBlackPurpleWhiteColors(ref color);
+                    break;
+                default:
+                    throw new ApplicationException("不正なColorModeが指定されました。");
+            };
+
         }
 
         private Bitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
