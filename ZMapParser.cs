@@ -1,0 +1,163 @@
+﻿using G_PROJECT;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CodeD.Data
+{
+    internal class ZMapParser
+    {
+        internal string Header { get; private set; }
+        internal double[,] Data { get; private set; }
+        internal int XSize { get; private set; }
+        internal int YSize { get; private set; }
+        internal double Max { get; private set; }
+        internal double Min { get; private set; }
+
+        internal ZMapParser(string filename)
+        {
+            ParseZMapFile(filename);
+        }
+
+        /// <summary>
+        /// ZMapファイルをパースしてdouble型二次元配列をメンバ変数にセット
+        /// ※１　区切り文字は、タブ、コンマ、半角空白
+        /// ※２　データ点数が足りない場合、不正な値の場合、NaNを代入
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="p"></param>
+        private void ParseZMapFile(string filename)
+        {
+            TxtEnc enc = new TxtEnc();
+            var rawDataLines = File.ReadAllLines(filename, enc.SetFromTextFile(filename));
+            rawDataLines = SplitHeader(rawDataLines);
+
+            if (rawDataLines.Length == 0) return;
+
+            var spliter = GetSplitChar(rawDataLines[0]); 
+            XSize = rawDataLines[0].Trim().Split(spliter, StringSplitOptions.RemoveEmptyEntries).Length;
+            YSize = rawDataLines.Length;
+
+            Data = new double[XSize, YSize];
+            var threadNum = Environment.ProcessorCount;
+            var range = new int[1 + threadNum];
+            range[0] = 0;
+            range[range.Length - 1] = YSize;
+            for (var i = 1; i < threadNum; i++) { range[i] = YSize * i / threadNum; }
+
+            Action<int, int> parser = (startLineNo, endLineNo) =>
+            {
+                double parsed;
+                for (int j = startLineNo; j < endLineNo; j++)
+                {
+                    string[] line = rawDataLines[j].Trim().Split(spliter, StringSplitOptions.RemoveEmptyEntries);
+
+                    for (int i = 0; i < XSize; i++)
+                    {
+                        if (!(i < line.Length)) Data[i, j] = double.NaN; //データ点数が足りない場合
+                        else if (Double.TryParse(line[i], out parsed) && parsed != double.NaN) Data[i, j] = parsed;
+                        else Data[i, j] = double.NaN; //parse不可能な場合
+                    }
+                }
+            };
+
+            IAsyncResult[] iar = new IAsyncResult[threadNum];
+            for (int i = 0; i < threadNum; i++) { iar[i] = parser.BeginInvoke(range[i], range[i + 1], null, null); }
+            for (int i = 0; i < threadNum; i++) { parser.EndInvoke(iar[i]); }
+
+            Max = Data.Cast<double>().Max();
+            Min = Data.Cast<double>().Min();
+        }
+
+        private char[] GetSplitChar(string line1)
+        {
+            if (line1.Contains("\t")) { return new[] { '\t' }; }
+            else if (line1.Contains(",")) { return new[] { ',' }; }
+            else { return new[] { ' ' }; }
+        }
+
+        /// <summary>
+        /// ファイルの先頭部分において
+        /// 数値以外のものが含まれている場合
+        /// 数値のみのラインが現れるまでスキップし、
+        /// 当該ライン以降を返す
+        /// </summary>
+        /// <param name="data"></param>
+        private string[] SplitHeader(string[] data)
+        {
+            List<string> bodyData = new List<string>();
+            List<string> headerData = new List<string>();
+
+            var splitter = new char[] { '\t', ',', ' ' };
+            var bodyDataStart = 0;
+            //Headerデータの格納＋Bodyデータのスタート位置のサーチ
+            string[] tempLine;
+            for (int i = 0; i != data.Length; i++)
+            {
+                tempLine = data[i].Split(splitter, StringSplitOptions.RemoveEmptyEntries);
+
+                if (ContainsString(tempLine))
+                {
+                    headerData.Add(data[i]);
+                }
+                else
+                {
+                    bodyDataStart = i;
+                    break;
+                }
+
+                if (bodyDataStart == 0 && i == data.Length - 1) bodyDataStart = data.Length - 1;
+            }
+
+
+            //Bodyデータ格納
+            if (bodyDataStart != data.Length - 1)
+            {
+                for (int i = bodyDataStart; i != data.Length; i++)
+                {
+                    bodyData.Add(data[i]);
+                }
+            }
+
+            SetHeader(headerData);
+            return bodyData.ToArray();
+        }
+
+        private void SetHeader(List<string> headerData)
+        {
+            StringBuilder sb = new StringBuilder();
+            var maxItemCount = headerData.Count();
+            for (int i = 0; i < maxItemCount; i++)
+            {
+                sb.AppendLine(headerData[i]);
+            }
+
+            Header = sb.ToString();
+        }
+        /// <summary>
+        /// 要素内に数値以外が含まれているかチェック
+        /// </summary>
+        /// <param name="tempLine"></param>
+        /// <returns></returns>
+        private bool ContainsString(string[] tempLine)
+        {
+            bool containsString = false;
+            double trash;
+
+            if (tempLine.Length == 0) containsString = true;
+            for (int i = 0; i != tempLine.Length; i++)
+            {
+                if (!double.TryParse(tempLine[i], out trash))
+                {
+                    containsString = true;
+                    break; //数値じゃなかったら終了
+                }
+            }
+
+            return containsString;
+        }
+    }
+}
