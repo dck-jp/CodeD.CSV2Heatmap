@@ -34,7 +34,7 @@ namespace CodeD.Data
 
         public double PixelSize { get; private set; }
         public double[,] Data { get; private set; }
-        public string Header{get; private set;}
+        public string Header{get; set;}
         public double Max{get; private set;}
         public double Min {get; private set; }
 
@@ -43,7 +43,7 @@ namespace CodeD.Data
             Data = data;
             XSize = data.GetLength(0);
             YSize = data.GetLength(1);
-            PixelSize = PixelSize;
+            this.PixelSize = PixelSize;
 
             Header = header;
             EnablesOutOfRangeColor = false;
@@ -57,7 +57,7 @@ namespace CodeD.Data
             YSize = parser.YSize;
             Max = parser.Max;
             Min = parser.Min;
-            PixelSize = PixelSize;
+            this.PixelSize = PixelSize;
             EnablesOutOfRangeColor = false;
         }
 
