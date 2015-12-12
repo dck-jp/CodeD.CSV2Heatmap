@@ -38,17 +38,17 @@ namespace CodeD.Data
         public double Max{get; private set;}
         public double Min {get; private set; }
 
-        public ZMappingData(double[,] data, double PixelSize = 0, string header = "")
+        public ZMappingData(double[,] data, double pixelSize = 0, string header = "")
         {
             Data = data;
             XSize = data.GetLength(0);
             YSize = data.GetLength(1);
-            PixelSize = PixelSize;
+            PixelSize = pixelSize;
 
             Header = header;
             EnablesOutOfRangeColor = false;
         }
-        public ZMappingData(string filename, double PixelSize = 0)
+        public ZMappingData(string filename, double pixelSize = 0)
         {
             var parser = new ZMapParser(filename);
             Header = parser.Header;
@@ -57,7 +57,7 @@ namespace CodeD.Data
             YSize = parser.YSize;
             Max = parser.Max;
             Min = parser.Min;
-            PixelSize = PixelSize;
+            PixelSize = pixelSize;
             EnablesOutOfRangeColor = false;
         }
 
