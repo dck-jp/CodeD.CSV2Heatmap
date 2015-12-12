@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="ChainingAssertion.MSTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ZMapParserTests.cs" />
     <Compile Include="ZMappingDataTests.cs" />
   </ItemGroup>
   <ItemGroup>

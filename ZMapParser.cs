@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CodeD.Data
 {
-    internal class ZMapParser
+    public class ZMapParser
     {
         internal string Header { get; private set; }
         internal double[,] Data { get; private set; }
@@ -17,7 +17,7 @@ namespace CodeD.Data
         internal double Max { get; private set; }
         internal double Min { get; private set; }
 
-        internal ZMapParser(string filename)
+        public ZMapParser(string filename)
         {
             ParseZMapFile(filename);
         }
@@ -31,13 +31,12 @@ namespace CodeD.Data
         /// <param name="p"></param>
         private void ParseZMapFile(string filename)
         {
-            TxtEnc enc = new TxtEnc();
-            var rawDataLines = File.ReadAllLines(filename, enc.SetFromTextFile(filename));
+            string[] rawDataLines = CreateRawData(filename);
             rawDataLines = SplitHeader(rawDataLines);
 
             if (rawDataLines.Length == 0) return;
 
-            var spliter = GetSplitChar(rawDataLines[0]); 
+            var spliter = GetSplitChar(rawDataLines[0]);
             XSize = rawDataLines[0].Trim().Split(spliter, StringSplitOptions.RemoveEmptyEntries).Length;
             YSize = rawDataLines.Length;
 
@@ -72,6 +71,22 @@ namespace CodeD.Data
             Min = Data.Cast<double>().Min();
         }
 
+        /// <summary>
+        /// 末尾の空白行は削除する
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        private string[] CreateRawData(string filename)
+        {
+            var enc = new TxtEnc();
+            var rawDataLines = File.ReadAllLines(filename, enc.SetFromTextFile(filename));
+            if (rawDataLines[rawDataLines.Length - 1] == "")
+            {
+                Array.Copy(rawDataLines, rawDataLines, rawDataLines.Length - 1);
+            }
+            return rawDataLines;
+        }
+
         private char[] GetSplitChar(string line1)
         {
             if (line1.Contains("\t")) { return new[] { '\t' }; }
@@ -88,44 +103,46 @@ namespace CodeD.Data
         /// <param name="data"></param>
         private string[] SplitHeader(string[] data)
         {
-            List<string> bodyData = new List<string>();
-            List<string> headerData = new List<string>();
-
-            var splitter = new char[] { '\t', ',', ' ' };
-            var bodyDataStart = 0;
-            //Headerデータの格納＋Bodyデータのスタート位置のサーチ
-            string[] tempLine;
-            for (int i = 0; i != data.Length; i++)
+            var bodyDataBeginLine = SearchBodyBeginLine(data);
+            if (bodyDataBeginLine == -1) // データが全くない場合
             {
-                tempLine = data[i].Split(splitter, StringSplitOptions.RemoveEmptyEntries);
-
-                if (ContainsString(tempLine))
-                {
-                    headerData.Add(data[i]);
-                }
-                else
-                {
-                    bodyDataStart = i;
-                    break;
-                }
-
-                if (bodyDataStart == 0 && i == data.Length - 1) bodyDataStart = data.Length - 1;
+                SetHeader(data.ToList());
+                return new string[] { };
             }
-
-
-            //Bodyデータ格納
-            if (bodyDataStart != data.Length - 1)
+            else //データがある場合
             {
-                for (int i = bodyDataStart; i != data.Length; i++)
-                {
-                    bodyData.Add(data[i]);
-                }
+                List<string> bodyData = new List<string>();
+                //Headerデータ格納
+                SetHeader(data.Take(bodyDataBeginLine - 1).ToList());
+                //Bodyデータ返却
+                return data.Skip(bodyDataBeginLine - 1).ToArray();
             }
-
-            SetHeader(headerData);
-            return bodyData.ToArray();
         }
 
+        /// <summary>
+        /// データ本体のスタート位置を探す
+        /// ※　データ全くない場合は -1 を返す
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        private int SearchBodyBeginLine(string[] data)
+        {
+            var i = 0;
+            while (ContainsString(data[i])) {
+                if (i == data.Length - 1) // 最終行まで到達した場合
+                {
+                    i = -1;
+                    break; 
+                }
+                i++;
+            }
+            return i;
+        }
+
+        /// <summary>
+        /// 文字列にしてHeaderプロパティにセット
+        /// </summary>
+        /// <param name="headerData"></param>
         private void SetHeader(List<string> headerData)
         {
             StringBuilder sb = new StringBuilder();
@@ -137,8 +154,22 @@ namespace CodeD.Data
 
             Header = sb.ToString();
         }
+
+
         /// <summary>
-        /// 要素内に数値以外が含まれているかチェック
+        /// データに数値以外(文字列)が含まれているか
+        /// </summary>
+        /// <param name="v">CSVファイルの１行分のデータ</param>
+        /// <returns></returns>
+        private bool ContainsString(string v)
+        {
+            var splitter = new char[] { '\t', ',', ' ' };
+            var tempLine = v.Split(splitter, StringSplitOptions.RemoveEmptyEntries);
+            return ContainsString(tempLine);
+        }
+
+        /// <summary>
+        /// 配列の要素内に数値以外が含まれているかチェック
         /// </summary>
         /// <param name="tempLine"></param>
         /// <returns></returns>
