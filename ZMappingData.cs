@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Drawing;
-using G_PROJECT;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace CodeD.Data
 {
@@ -17,13 +15,15 @@ namespace CodeD.Data
 
     public class ZMappingData
     {
-        static int majourVersion = 2;
-        static int minorVersion = 0;
-        static int revisionVersion = 0;
-        public static string VersionInfo { get { return majourVersion.ToString() + "." + minorVersion.ToString() + "." + revisionVersion; } } 
+        private static int majourVersion = 2;
+        private static int minorVersion = 0;
+        private static int revisionVersion = 0;
+        public static string VersionInfo { get { return majourVersion.ToString() + "." + minorVersion.ToString() + "." + revisionVersion; } }
 
-        static Color[] color;
-        public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite};
+        private static Color[] color;
+
+        public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
+
         public enum ConvertMode { None, ln, log };
 
         public Color OutOfRangeColor { get; set; }
@@ -34,9 +34,9 @@ namespace CodeD.Data
 
         public double PixelSize { get; private set; }
         public double[,] Data { get; private set; }
-        public string Header{get; private set;}
-        public double Max{get; private set;}
-        public double Min {get; private set; }
+        public string Header { get; private set; }
+        public double Max { get; private set; }
+        public double Min { get; private set; }
 
         public ZMappingData(double[,] data, double pixelSize = 0, string header = "")
         {
@@ -48,6 +48,7 @@ namespace CodeD.Data
             Header = header;
             EnablesOutOfRangeColor = false;
         }
+
         public ZMappingData(string filename, double pixelSize = 0)
         {
             var parser = new ZMapParser(filename);
@@ -72,20 +73,21 @@ namespace CodeD.Data
         public Bitmap ToBitmap(double? min = null, double? max = null, ColorMode colorMode = ColorMode.Rainbow, ConvertMode convertMode = ConvertMode.None)
         {
             CreateColorMap(colorMode);
-            if (min == null ){ min = Data.Cast<double>().Min(); }
-            if (max == null ){ max = Data.Cast<double>().Max(); }
+            if (min == null) { min = Data.Cast<double>().Min(); }
+            if (max == null) { max = Data.Cast<double>().Max(); }
 
             try
             {
-                if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min,max,convertMode);
+                if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min, max, convertMode);
 
-                Bitmap bitmap = new Bitmap(XSize, YSize, PixelFormat.Format24bppRgb);
-                Rectangle rectangle = new Rectangle(0, 0, XSize , YSize);
-                BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+                var bitmap = new Bitmap(XSize, YSize, PixelFormat.Format24bppRgb);
+                var rectangle = new Rectangle(0, 0, XSize, YSize);
+                var bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-                IntPtr adr = bitmapData.Scan0;
-                int stride = bitmapData.Stride;
-                int pos,number;
+                var scan0 = bitmapData.Scan0;
+                var stride = bitmapData.Stride;
+                var height = bitmapData.Height;
+                int pos, number;
 
                 Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
                 for (int x = 0; x < XSize; x++)
@@ -97,18 +99,18 @@ namespace CodeD.Data
                         if (number > 764) { number = 764; }
                         else if (number < 0) { number = 0; }
                         var _color = color[number];
-                        Marshal.WriteByte(adr, pos, _color.B);
-                        Marshal.WriteByte(adr, pos + 1, _color.G);
-                        Marshal.WriteByte(adr, pos + 2, _color.R);
+                        Marshal.WriteByte(scan0, pos, _color.B);
+                        Marshal.WriteByte(scan0, pos + 1, _color.G);
+                        Marshal.WriteByte(scan0, pos + 2, _color.R);
                     }
                 }
 
                 bitmap.UnlockBits(bitmapData);
                 return bitmap;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                throw new ApplicationException("Cannot create Bitmap"　+ Environment.NewLine + e.Source + e.StackTrace);
+                throw new ApplicationException("Cannot create Bitmap" + Environment.NewLine + e.Source + e.StackTrace);
             }
         }
 
@@ -120,16 +122,18 @@ namespace CodeD.Data
                 case ColorMode.Rainbow:
                     SetRainbowColors(ref color);
                     break;
+
                 case ColorMode.Monochorome:
                     SetMonochromeColors(ref color);
                     break;
+
                 case ColorMode.BlackPurpleWhite:
                     SetBlackPurpleWhiteColors(ref color);
                     break;
+
                 default:
                     throw new ApplicationException("Illegal ColorMode");
             };
-
         }
 
         private Bitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
@@ -179,12 +183,15 @@ namespace CodeD.Data
                 case ConvertMode.None:
                     calcColor = (x, y) => { return (int)((Data[x, y] - min) / (max - min) * 764); };
                     break;
+
                 case ConvertMode.log:
                     calcColor = (x, y) => { return (int)(Math.Log(Data[x, y] - (double)min + double.Epsilon) / Math.Log((double)(max - min)) * 764); };
                     break;
+
                 case ConvertMode.ln:
                     calcColor = (x, y) => { return (int)(Math.Log10(Data[x, y] - (double)min + double.Epsilon) / Math.Log10((double)(max - min)) * 764); };
                     break;
+
                 default:
                     throw new ArgumentException("");
             }
@@ -244,7 +251,6 @@ namespace CodeD.Data
                 color[i] = Color.FromArgb(255, 765 - i, 0);
             }
         }
-        
 
         /// <summary>
         /// ファイルに保存
@@ -299,6 +305,7 @@ namespace CodeD.Data
         }
 
         #region 簡易画像処理
+
         /// <summary>
         /// 平面補正した面を取得(要PixelPitchの設定)
         /// ApplicationException: PixelPitch未設定時
@@ -306,7 +313,7 @@ namespace CodeD.Data
         /// <returns></returns>
         public ZMappingData GetPlaneCorrection()
         {
-            if(PixelSize == 0) throw new ApplicationException("Set pixel size");
+            if (PixelSize == 0) throw new ApplicationException("Set pixel size");
 
             double sa = 0, sb = 0, sc = 0, sd = 0, se = 0;
             double sf = 0, sg = 0, sh = 0, si = 0;
@@ -353,7 +360,6 @@ namespace CodeD.Data
             }
 
             return new ZMappingData(corrected, PixelSize);
-
         }
 
         /// <summary>
@@ -389,7 +395,7 @@ namespace CodeD.Data
             {
                 for (int j = 0; j < YSize; j++)
                 {
-                    rotated[j, i] = Data[XSize - 1 - i,j];
+                    rotated[j, i] = Data[XSize - 1 - i, j];
                 }
             }
 
@@ -459,6 +465,7 @@ namespace CodeD.Data
 
             return new ZMappingData(newZMap);
         }
-        #endregion
+
+        #endregion 簡易画像処理
     }
 }

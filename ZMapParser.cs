@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CodeD.Data
 {
@@ -128,11 +127,12 @@ namespace CodeD.Data
         private int SearchBodyBeginLine(string[] data)
         {
             var i = 0;
-            while (ContainsString(data[i])) {
+            while (ContainsString(data[i]))
+            {
                 if (i == data.Length - 1) // 最終行まで到達した場合
                 {
                     i = -1;
-                    break; 
+                    break;
                 }
                 i++;
             }
@@ -154,7 +154,6 @@ namespace CodeD.Data
 
             Header = sb.ToString();
         }
-
 
         /// <summary>
         /// データに数値以外(文字列)が含まれているか
