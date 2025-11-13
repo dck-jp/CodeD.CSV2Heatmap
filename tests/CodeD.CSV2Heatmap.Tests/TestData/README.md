@@ -22,10 +22,6 @@ This folder contains sample files for unit testing the XYZData class.
 - **Data**: 3x3 grid data (X coordinates: 0-2, Y coordinates: 0-2)
 - **Purpose**: More complex real data reading test
 
-### xyz_sample.txt / xyz_sample2.txt
-- **Format**: Original files from samples folder
-- **Purpose**: Reference only (currently not used in tests)
-
 ## Test Data Creation Guidelines
 
 1. **File naming**: `sample_` prefix + descriptive name
