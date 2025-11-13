@@ -22,28 +22,28 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void HeatmapRendererTest_FileRead1()
+        public async Task HeatmapRendererTest_FileRead1()
         {
             var testFilename01 = TestHelpers.GetTestFilePath("grid_test1.csv");
-            var zmap = new HeatmapRenderer(testFilename01, 0);
+            var zmap = await HeatmapRenderer.CreateAsync(testFilename01, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(1); //Y方向 
         }
 
         [TestMethod()]
-        public void HeatmapRendererTest_FileRead2()
+        public async Task HeatmapRendererTest_FileRead2()
         {
             var testFilename02 = TestHelpers.GetTestFilePath("grid_test2.csv");
-            var zmap = new HeatmapRenderer(testFilename02, 0);
+            var zmap = await HeatmapRenderer.CreateAsync(testFilename02, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(2); //X方向       
         }
 
         [TestMethod()]
-        public void ToBitmapTest()
+        public async Task ToBitmapTest()
         {
             var testFilename01 = TestHelpers.GetTestFilePath("grid_test1.csv");
-            var zmap = new HeatmapRenderer(testFilename01, 0);
+            var zmap = await HeatmapRenderer.CreateAsync(testFilename01, 0);
             var bitmap = zmap.ToBitmap();
             bitmap.Width.Is(3);
             bitmap.Height.Is(1);

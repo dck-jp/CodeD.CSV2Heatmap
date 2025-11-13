@@ -9,14 +9,14 @@ namespace CodeD.Tests
     public class XyzCsvParserTests
     {
         [TestMethod]
-        public void XyzCsvParser_TabSeparated_WithHeader_Test()
+        public async System.Threading.Tasks.Task XyzCsvParser_TabSeparated_WithHeader_Test()
         {
             // Arrange
             var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XyzCsvParser(filePath, zColNum);
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
             var array = xyz.Data;
             var header = xyz.Header;
 
@@ -32,14 +32,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XyzCsvParser_CommaSeparated_Test()
+        public async System.Threading.Tasks.Task XyzCsvParser_CommaSeparated_Test()
         {
             // Arrange
             var filePath = TestHelpers.GetTestFilePath("sample_comma_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XyzCsvParser(filePath, zColNum);
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
             var array = xyz.Data;
             var header = xyz.Header;
 
@@ -54,14 +54,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XyzCsvParser_RealData_Test()
+        public async System.Threading.Tasks.Task XyzCsvParser_RealData_Test()
         {
             // Arrange
             var filePath = TestHelpers.GetTestFilePath("sample_real_data.txt");
             var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XyzCsvParser(filePath, zColNum);
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
             var header = xyz.Header;
             var array = xyz.Data;
 
@@ -79,14 +79,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XyzCsvParser_InvalidColumnNumber_Test()
+        public async System.Threading.Tasks.Task XyzCsvParser_InvalidColumnNumber_Test()
         {
             // Arrange
             var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 10; // Invalid column number
 
             // Act
-            var xyz = new XyzCsvParser(filePath, zColNum);
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
             var array = xyz.Data;
 
             // Assert
@@ -95,14 +95,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XyzCsvParser_HeaderParsing_Test()
+        public async System.Threading.Tasks.Task XyzCsvParser_HeaderParsing_Test()
         {
             // Arrange
             var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XyzCsvParser(filePath, zColNum);
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
 
             // Assert
             Assert.IsNotNull(xyz.Header, "Header should be retrieved");
