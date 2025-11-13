@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using SkiaSharp;
 
 namespace CodeD
@@ -47,9 +48,25 @@ namespace CodeD
             EnablesOutOfRangeColor = false;
         }
 
+        private ZMappingData()
+        {
+        }
+
+        public static async Task<ZMappingData> CreateAsync(string filename, double pixelSize = 0)
+        {
+            var mappingData = new ZMappingData();
+            await mappingData.InitializeAsync(filename, pixelSize);
+            return mappingData;
+        }
+
         public ZMappingData(string filename, double pixelSize = 0)
         {
-            var parser = new ZMapParser(filename);
+            InitializeAsync(filename, pixelSize).GetAwaiter().GetResult();
+        }
+
+        private async Task InitializeAsync(string filename, double pixelSize)
+        {
+            var parser = await ZMapParser.CreateAsync(filename);
             Header = parser.Header;
             Data = parser.Data;
             XSize = parser.XSize;

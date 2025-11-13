@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CodeD
 {
@@ -16,9 +17,20 @@ namespace CodeD
         internal double Max { get; private set; }
         internal double Min { get; private set; }
 
+        private ZMapParser()
+        {
+        }
+
+        public static async Task<ZMapParser> CreateAsync(string filename)
+        {
+            var parser = new ZMapParser();
+            await parser.ParseZMapFileAsync(filename);
+            return parser;
+        }
+
         public ZMapParser(string filename)
         {
-            ParseZMapFile(filename);
+            ParseZMapFileAsync(filename).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -28,7 +40,7 @@ namespace CodeD
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="p"></param>
-        private void ParseZMapFile(string filename)
+        private async Task ParseZMapFileAsync(string filename)
         {
             string[] rawDataLines = CreateRawData(filename);
             rawDataLines = SplitHeader(rawDataLines);
@@ -62,9 +74,15 @@ namespace CodeD
                 }
             };
 
-            IAsyncResult[] iar = new IAsyncResult[threadNum];
-            for (int i = 0; i < threadNum; i++) { iar[i] = parser.BeginInvoke(range[i], range[i + 1], null, null); }
-            for (int i = 0; i < threadNum; i++) { parser.EndInvoke(iar[i]); }
+            // 非同期並列処理でパフォーマンスを向上
+            var tasks = new Task[threadNum];
+            for (int i = 0; i < threadNum; i++) 
+            {
+                var startRange = range[i];
+                var endRange = range[i + 1];
+                tasks[i] = Task.Run(() => parser(startRange, endRange));
+            }
+            await Task.WhenAll(tasks);
 
             Max = Data.Cast<double>().Max();
             Min = Data.Cast<double>().Min();
@@ -78,7 +96,12 @@ namespace CodeD
         private string[] CreateRawData(string filename)
         {
             var enc = new TxtEnc();
-            var rawDataLines = File.ReadAllLines(filename, enc.SetFromTextFile(filename));
+            var encoding = enc.SetFromTextFile(filename);
+            if (encoding == null)
+            {
+                encoding = System.Text.Encoding.UTF8; // デフォルトエンコーディングとしてUTF-8を使用
+            }
+            var rawDataLines = File.ReadAllLines(filename, encoding);
             if (rawDataLines[rawDataLines.Length - 1] == "")
             {
                 Array.Copy(rawDataLines, rawDataLines, rawDataLines.Length - 1);
