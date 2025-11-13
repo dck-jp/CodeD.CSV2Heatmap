@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using G_PROJECT;
+using UtfUnknown;
 
 namespace CodeD
 {
@@ -41,16 +41,9 @@ namespace CodeD
 
         private async Task ParseXyzFileAsync(string filePath, int zColNum)
         {
-            Encoding encoding;
-            using (var txtEnc = new TxtEnc())
-            {
-                encoding = txtEnc.SetFromTextFile(filePath);
-            }
-            // Use UTF-8 as default if encoding is null
-            if (encoding == null)
-            {
-                encoding = Encoding.UTF8;
-            }
+            var detectionResult = CharsetDetector.DetectFromFile(filePath);
+            var encoding = detectionResult.Detected?.Encoding ?? Encoding.UTF8;
+            
             var rawDataLines = File.ReadAllLines(filePath, encoding);
             rawDataLines = SplitHeader(rawDataLines);
             if (rawDataLines.Length == 0) return;

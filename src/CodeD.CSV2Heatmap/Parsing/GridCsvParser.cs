@@ -1,10 +1,10 @@
-﻿using G_PROJECT;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UtfUnknown;
 
 namespace CodeD
 {
@@ -95,16 +95,13 @@ namespace CodeD
         /// <returns></returns>
         private string[] CreateRawData(string filename)
         {
-            var enc = new TxtEnc();
-            var encoding = enc.SetFromTextFile(filename);
-            if (encoding == null)
-            {
-                encoding = System.Text.Encoding.UTF8; // Use UTF-8 as default encoding
-            }
+            var detectionResult = CharsetDetector.DetectFromFile(filename);
+            var encoding = detectionResult.Detected?.Encoding ?? Encoding.UTF8;
+            
             var rawDataLines = File.ReadAllLines(filename, encoding);
-            if (rawDataLines[rawDataLines.Length - 1] == "")
+            if (rawDataLines.Length > 0 && rawDataLines[rawDataLines.Length - 1] == "")
             {
-                Array.Copy(rawDataLines, rawDataLines, rawDataLines.Length - 1);
+                Array.Resize(ref rawDataLines, rawDataLines.Length - 1);
             }
             return rawDataLines;
         }
