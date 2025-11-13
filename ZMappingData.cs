@@ -3,9 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 #if !NETSTANDARD2_0_EXCLUDE_DRAWING
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+using SkiaSharp;
 #endif
 
 namespace CodeD.Data
@@ -23,7 +21,7 @@ namespace CodeD.Data
         public static string VersionInfo { get { return majourVersion.ToString() + "." + minorVersion.ToString() + "." + revisionVersion; } }
 
 #if !NETSTANDARD2_0_EXCLUDE_DRAWING
-        private static Color[] color;
+        private static SKColor[] color;
 #endif
 
     public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
@@ -31,7 +29,7 @@ namespace CodeD.Data
     public enum ConvertMode { None, ln, log };
 
 #if !NETSTANDARD2_0_EXCLUDE_DRAWING
-    public Color OutOfRangeColor { get; set; }
+    public SKColor OutOfRangeColor { get; set; }
     public bool EnablesOutOfRangeColor { get; set; }
 #endif
 
@@ -81,7 +79,7 @@ namespace CodeD.Data
         /// <param name="colorMode"></param>
         /// <param name="mode"></param>
         /// <returns></returns>
-        public Bitmap ToBitmap(double? min = null, double? max = null, ColorMode colorMode = ColorMode.Rainbow, ConvertMode convertMode = ConvertMode.None)
+        public SKBitmap ToBitmap(double? min = null, double? max = null, ColorMode colorMode = ColorMode.Rainbow, ConvertMode convertMode = ConvertMode.None)
         {
             CreateColorMap(colorMode);
             if (min == null) { min = Data.Cast<double>().Min(); }
@@ -91,32 +89,21 @@ namespace CodeD.Data
             {
                 if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min, max, convertMode);
 
-                var bitmap = new Bitmap(XSize, YSize, PixelFormat.Format24bppRgb);
-                var rectangle = new Rectangle(0, 0, XSize, YSize);
-                var bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-
-                var scan0 = bitmapData.Scan0;
-                var stride = bitmapData.Stride;
-                var height = bitmapData.Height;
-                int pos, number;
-
+                var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
+                
                 Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
                 for (int x = 0; x < XSize; x++)
                 {
                     for (int y = 0; y < YSize; y++)
                     {
-                        pos = x * 3 + stride * y;
-                        number = colorFunc(x, y);
+                        int number = colorFunc(x, y);
                         if (number > 764) { number = 764; }
                         else if (number < 0) { number = 0; }
                         var _color = color[number];
-                        Marshal.WriteByte(scan0, pos, _color.B);
-                        Marshal.WriteByte(scan0, pos + 1, _color.G);
-                        Marshal.WriteByte(scan0, pos + 2, _color.R);
+                        bitmap.SetPixel(x, y, _color);
                     }
                 }
 
-                bitmap.UnlockBits(bitmapData);
                 return bitmap;
             }
             catch (Exception e)
@@ -127,7 +114,7 @@ namespace CodeD.Data
 
         private void CreateColorMap(ColorMode colorMode)
         {
-            color = new Color[765];
+            color = new SKColor[765];
             switch (colorMode)
             {
                 case ColorMode.Rainbow:
@@ -147,42 +134,32 @@ namespace CodeD.Data
             };
         }
 
-        private Bitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
+        private SKBitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
         {
-            Bitmap bitmap = new Bitmap(XSize, YSize, PixelFormat.Format24bppRgb);
-            Rectangle rectangle = new Rectangle(0, 0, XSize, YSize);
-            BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-
-            IntPtr adr = bitmapData.Scan0;
-            int stride = bitmapData.Stride;
-            int pos, number;
+            var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
 
             Func<int, int, int> calcColor = CreateFormula(min, max, convertMode);
             for (int x = 0; x < XSize; x++)
             {
                 for (int y = 0; y < YSize; y++)
                 {
-                    pos = x * 3 + stride * y;
-                    Color _color;
+                    SKColor _color;
                     if (Data[x, y] > max || Data[x, y] < min)
                     {
                         _color = OutOfRangeColor;
                     }
                     else
                     {
-                        number = calcColor(x, y);
-                        if (number > 765 || number < 0) number = 0;
+                        int number = calcColor(x, y);
+                        if (number > 764 || number < 0) number = 0;
 
                         _color = color[number];
                     }
 
-                    Marshal.WriteByte(adr, pos, _color.B);
-                    Marshal.WriteByte(adr, pos + 1, _color.G);
-                    Marshal.WriteByte(adr, pos + 2, _color.R);
+                    bitmap.SetPixel(x, y, _color);
                 }
             }
 
-            bitmap.UnlockBits(bitmapData);
             return bitmap;
         }
 
@@ -214,18 +191,18 @@ namespace CodeD.Data
         /// 黒→紫→白の配色作成
         /// </summary>
         /// <param name="color"></param>
-        private void SetBlackPurpleWhiteColors(ref Color[] color)
+        private void SetBlackPurpleWhiteColors(ref SKColor[] color)
         {
             int visibility;
             for (int i = 0; i < 510; i++)
             {
                 visibility = (i + 1) / 2;
-                color[i] = Color.FromArgb(visibility / 2, 0, visibility);
+                color[i] = new SKColor((byte)(visibility / 2), 0, (byte)visibility);
             }
             for (int i = 510; i < 765; i++)
             {
                 visibility = i - 510;
-                color[i] = Color.FromArgb(255, visibility, 255);
+                color[i] = new SKColor(255, (byte)visibility, 255);
             }
         }
 
@@ -233,13 +210,13 @@ namespace CodeD.Data
         /// モノクロ配色作成
         /// </summary>
         /// <param name="color"></param>
-        private void SetMonochromeColors(ref Color[] color)
+        private void SetMonochromeColors(ref SKColor[] color)
         {
             int visibility;
             for (int i = 0; i < 765; i++)
             {
                 visibility = (i + 1) / 3;
-                color[i] = Color.FromArgb(visibility, visibility, visibility);
+                color[i] = new SKColor((byte)visibility, (byte)visibility, (byte)visibility);
             }
         }
 
@@ -247,19 +224,19 @@ namespace CodeD.Data
         /// AV似非似の配色作成
         /// </summary>
         /// <param name="color"></param>
-        private void SetRainbowColors(ref Color[] color)
+        private void SetRainbowColors(ref SKColor[] color)
         {
             for (int i = 0; i < 255; i++)
             {
-                color[i] = Color.FromArgb(0, i, 255);
+                color[i] = new SKColor(0, (byte)i, 255);
             }
             for (int i = 255; i < 510; i++)
             {
-                color[i] = Color.FromArgb(i - 255, 255, 510 - i);
+                color[i] = new SKColor((byte)(i - 255), 255, (byte)(510 - i));
             }
             for (int i = 510; i < 765; i++)
             {
-                color[i] = Color.FromArgb(255, 765 - i, 0);
+                color[i] = new SKColor(255, (byte)(765 - i), 0);
             }
         }
 #endif

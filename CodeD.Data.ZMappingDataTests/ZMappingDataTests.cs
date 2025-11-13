@@ -65,8 +65,10 @@ namespace CodeD.Data.Tests
         public void ToBitmapTest()
         {
             var zmap = new ZMappingData(testFilename01, 0);
-            zmap.ToBitmap().Width.Is(3);
-            zmap.ToBitmap().Height.Is(1);
+            var bitmap = zmap.ToBitmap();
+            bitmap.Width.Is(3);
+            bitmap.Height.Is(1);
+            bitmap.Dispose(); // SkiaSharpではリソース解放が必要
         }
     }
 }
