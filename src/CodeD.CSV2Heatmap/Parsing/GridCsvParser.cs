@@ -24,13 +24,8 @@ namespace CodeD
         public static async Task<GridCsvParser> CreateAsync(string filename)
         {
             var parser = new GridCsvParser();
-            await parser.ParseZMapFileAsync(filename);
+            await parser.ParseZMapFileAsync(filename).ConfigureAwait(false);
             return parser;
-        }
-
-        public GridCsvParser(string filename)
-        {
-            ParseZMapFileAsync(filename).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -81,7 +76,7 @@ namespace CodeD
                 var endRange = range[i + 1];
                 tasks[i] = Task.Run(() => parser(startRange, endRange));
             }
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             Max = Data.Cast<double>().Max();
             Min = Data.Cast<double>().Min();

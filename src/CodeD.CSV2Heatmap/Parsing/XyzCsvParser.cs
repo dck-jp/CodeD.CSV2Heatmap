@@ -30,13 +30,8 @@ namespace CodeD
         public static async Task<XyzCsvParser> CreateAsync(string filePath, int zColNum)
         {
             var parser = new XyzCsvParser();
-            await parser.ParseXyzFileAsync(filePath, zColNum);
+            await parser.ParseXyzFileAsync(filePath, zColNum).ConfigureAwait(false);
             return parser;
-        }
-
-        public XyzCsvParser(string filePath, int zColNum)
-        {
-            ParseXyzFileAsync(filePath, zColNum).GetAwaiter().GetResult();
         }
 
         private async Task ParseXyzFileAsync(string filePath, int zColNum)
@@ -52,7 +47,7 @@ namespace CodeD
             _MaxZColNum = rawDataLines[0].Trim().Split(splitter, StringSplitOptions.RemoveEmptyEntries).Length;
             if (_MaxZColNum < zColNum) return;
 
-            await Task.Run(() => ExtractXYZ(rawDataLines, zColNum, splitter));
+            await Task.Run(() => ExtractXYZ(rawDataLines, zColNum, splitter)).ConfigureAwait(false);
             _LoadingSuccess = true;
             
             // Convert to 2D array and set properties

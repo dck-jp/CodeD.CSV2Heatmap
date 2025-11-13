@@ -50,19 +50,14 @@ namespace CodeD
 
         public static async Task<HeatmapRenderer> CreateAsync(string filename, double pixelSize = 0)
         {
-            var mappingData = new HeatmapRenderer();
-            await mappingData.InitializeAsync(filename, pixelSize);
-            return mappingData;
-        }
-
-        public HeatmapRenderer(string filename, double pixelSize = 0)
-        {
-            InitializeAsync(filename, pixelSize).GetAwaiter().GetResult();
+            var renderer = new HeatmapRenderer();
+            await renderer.InitializeAsync(filename, pixelSize).ConfigureAwait(false);
+            return renderer;
         }
 
         private async Task InitializeAsync(string filename, double pixelSize)
         {
-            var parser = await GridCsvParser.CreateAsync(filename);
+            var parser = await GridCsvParser.CreateAsync(filename).ConfigureAwait(false);
             Header = parser.Header;
             Data = parser.Data;
             XSize = parser.XSize;
