@@ -11,7 +11,7 @@ using System.Diagnostics;
 namespace CodeD.Tests
 {
     [TestClass()]
-    public class ZMappingDataTests
+    public class HeatmapRendererTests
     {
         //データ行1行 + 空白行
         public readonly string testFilename01 = "test1.csv";
@@ -37,26 +37,26 @@ namespace CodeD.Tests
             File.Delete(testFilename02);
         }
 
-        [TestMethod()]
-        public void ZMappingDataTest()
+        [TestMethod]
+        public void HeatmapRendererTest()
         {
             var src = new[,] { { 0.1, 0.1, 0.1 } };
-            var zmap = new ZMappingData(src, 0);
+            var zmap = new HeatmapRenderer(src, 0);
             zmap.Data.IsNotNull();
         }
 
-        [TestMethod()]
-        public void ZMappingDataTest_FileRead1()
+        [TestMethod]
+        public void HeatmapRendererTest_FileRead1()
         {
-            var zmap = new ZMappingData(testFilename01, 0);
+            var zmap = new HeatmapRenderer(testFilename01, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(1); //Y方向 
         }
 
         [TestMethod()]
-        public void ZMappingDataTest_FileRead2()
+        public void HeatmapRendererTest_FileRead2()
         {
-            var zmap = new ZMappingData(testFilename02, 0);
+            var zmap = new HeatmapRenderer(testFilename02, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(2); //X方向       
         }
@@ -64,7 +64,7 @@ namespace CodeD.Tests
         [TestMethod()]
         public void ToBitmapTest()
         {
-            var zmap = new ZMappingData(testFilename01, 0);
+            var zmap = new HeatmapRenderer(testFilename01, 0);
             var bitmap = zmap.ToBitmap();
             bitmap.Width.Is(3);
             bitmap.Height.Is(1);

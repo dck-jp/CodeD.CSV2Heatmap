@@ -36,18 +36,18 @@ namespace CodeD.Tests
             File.Delete(testFilename02);
         }
 
-        [TestMethod()]
-        public void ZMapParserTest1()
+        [TestMethod]
+        public void GridCsvParserTest1()
         {
-            var p = new ZMapParser(testFilename01);
+            var p = new GridCsvParser(testFilename01);
             var y = (int)(p.AsDynamic().YSize);
             y.Is(1);
         }
 
-        [TestMethod()]
-        public void ZMapParserTest2()
+        [TestMethod]
+        public void GridCsvParserTest2()
         {
-            var p = new ZMapParser(testFilename02);
+            var p = new GridCsvParser(testFilename02);
             var y = (int)(p.AsDynamic().YSize);
             y.Is(2);
         }
@@ -55,7 +55,7 @@ namespace CodeD.Tests
         [TestMethod()]
         public void CreateRawDataTest1()
         {
-            var p = new ZMapParser(testFilename01);
+            var p = new GridCsvParser(testFilename01);
             var s = p.AsDynamic().CreateRawData(testFilename01) as string[];
             s.Length.Is(1);
         }
@@ -63,24 +63,24 @@ namespace CodeD.Tests
         [TestMethod()]
         public void CreateRawDataTest2()
         {
-            var p = new ZMapParser(testFilename02);
+            var p = new GridCsvParser(testFilename02);
             var s = p.AsDynamic().CreateRawData(testFilename02) as string[];
             s.Length.Is(2);
         }
 
         [TestMethod()]
-        public void SplitHeaderTest1()
+        public void GetSplitCharTest1()
         {
-            var p = new ZMapParser(testFilename01);
+            var p = new GridCsvParser(testFilename01);
             var raw = p.AsDynamic().CreateRawData(testFilename01) as string[];
             var s = p.AsDynamic().SplitHeader(raw) as string[];
             s.Length.Is(1);
         }
 
         [TestMethod()]
-        public void SplitHeaderTest2()
+        public void GetSplitCharTest2()
         {
-            var p = new ZMapParser(testFilename02);
+            var p = new GridCsvParser(testFilename02);
             var raw = p.AsDynamic().CreateRawData(testFilename02) as string[];
             var s = p.AsDynamic().SplitHeader(raw) as string[];
             s.Length.Is(2);

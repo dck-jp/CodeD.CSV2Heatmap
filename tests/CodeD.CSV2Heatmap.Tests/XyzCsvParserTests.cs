@@ -6,23 +6,23 @@ using CodeD;
 namespace CodeD.Tests
 {
     [TestClass]
-    public class XYZDataTests
+    public class XyzCsvParserTests
     {
         private string GetTestFilePath(string fileName)
         {
             // Get file path from TestData folder
-            return Path.Combine(Path.GetDirectoryName(typeof(XYZDataTests).Assembly.Location), "TestData", fileName);
+            return Path.Combine(Path.GetDirectoryName(typeof(XyzCsvParserTests).Assembly.Location), "TestData", fileName);
         }
 
         [TestMethod]
-        public void XYZData_TabSeparated_WithHeader_Test()
+        public void XyzCsvParser_TabSeparated_WithHeader_Test()
         {
             // Arrange
             var filePath = GetTestFilePath("sample_tab_separated.txt");
-            var zColNum = 3; // Use z1 column
+            var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XYZData(filePath, zColNum);
+            var xyz = new XyzCsvParser(filePath, zColNum);
             var array = xyz.ToArray();
             var header = xyz.Header;
 
@@ -38,14 +38,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XYZData_CommaSeparated_Test()
+        public void XyzCsvParser_CommaSeparated_Test()
         {
             // Arrange
             var filePath = GetTestFilePath("sample_comma_separated.txt");
-            var zColNum = 4; // Use 4th column
+            var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XYZData(filePath, zColNum);
+            var xyz = new XyzCsvParser(filePath, zColNum);
             var array = xyz.ToArray();
             var header = xyz.Header;
 
@@ -60,14 +60,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XYZData_RealData_Test()
+        public void XyzCsvParser_RealData_Test()
         {
             // Arrange
             var filePath = GetTestFilePath("sample_real_data.txt");
-            var zColNum = 4; // Use 4th Z value
+            var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XYZData(filePath, zColNum);
+            var xyz = new XyzCsvParser(filePath, zColNum);
             var header = xyz.Header;
             var array = xyz.ToArray();
 
@@ -85,14 +85,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XYZData_InvalidColumnNumber_Test()
+        public void XyzCsvParser_InvalidColumnNumber_Test()
         {
             // Arrange
             var filePath = GetTestFilePath("sample_tab_separated.txt");
-            var zColNum = 10; // Non-existent column number
+            var zColNum = 10; // Invalid column number
 
             // Act
-            var xyz = new XYZData(filePath, zColNum);
+            var xyz = new XyzCsvParser(filePath, zColNum);
             var array = xyz.ToArray();
 
             // Assert
@@ -101,14 +101,14 @@ namespace CodeD.Tests
         }
 
         [TestMethod]
-        public void XYZData_HeaderParsing_Test()
+        public void XyzCsvParser_HeaderParsing_Test()
         {
             // Arrange
             var filePath = GetTestFilePath("sample_tab_separated.txt");
-            var zColNum = 3;
+            var zColNum = 3; // z1 column
 
             // Act
-            var xyz = new XYZData(filePath, zColNum);
+            var xyz = new XyzCsvParser(filePath, zColNum);
 
             // Assert
             Assert.IsNotNull(xyz.Header, "Header should be retrieved");

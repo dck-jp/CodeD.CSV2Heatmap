@@ -8,11 +8,11 @@ using SkiaSharp;
 namespace CodeD
 {
     /// <summary>
-    /// ZMappingDataクラス
+    /// HeatmapRendererクラス
     /// (弐次元配列データ可視化・簡易画像処理クラス)
     /// </summary>
 
-    public class ZMappingData
+    public class HeatmapRenderer
     {
         private static int majourVersion = 2;
         private static int minorVersion = 0;
@@ -37,7 +37,7 @@ namespace CodeD
         public double Max { get; private set; }
         public double Min { get; private set; }
 
-        public ZMappingData(double[,] data, double pixelSize = 0, string header = "")
+        public HeatmapRenderer(double[,] data, double pixelSize = 0, string header = "")
         {
             Data = data;
             XSize = data.GetLength(0);
@@ -48,25 +48,25 @@ namespace CodeD
             EnablesOutOfRangeColor = false;
         }
 
-        private ZMappingData()
+        private HeatmapRenderer()
         {
         }
 
-        public static async Task<ZMappingData> CreateAsync(string filename, double pixelSize = 0)
+        public static async Task<HeatmapRenderer> CreateAsync(string filename, double pixelSize = 0)
         {
-            var mappingData = new ZMappingData();
+            var mappingData = new HeatmapRenderer();
             await mappingData.InitializeAsync(filename, pixelSize);
             return mappingData;
         }
 
-        public ZMappingData(string filename, double pixelSize = 0)
+        public HeatmapRenderer(string filename, double pixelSize = 0)
         {
             InitializeAsync(filename, pixelSize).GetAwaiter().GetResult();
         }
 
         private async Task InitializeAsync(string filename, double pixelSize)
         {
-            var parser = await ZMapParser.CreateAsync(filename);
+            var parser = await GridCsvParser.CreateAsync(filename);
             Header = parser.Header;
             Data = parser.Data;
             XSize = parser.XSize;
@@ -305,7 +305,7 @@ namespace CodeD
         /// ApplicationException: PixelPitch未設定時
         /// </summary>
         /// <returns></returns>
-        public ZMappingData GetPlaneCorrection()
+        public HeatmapRenderer GetPlaneCorrection()
         {
             if (PixelSize == 0) throw new ApplicationException("Set pixel size");
 
@@ -353,7 +353,7 @@ namespace CodeD
                 }
             }
 
-            return new ZMappingData(corrected, PixelSize);
+            return new HeatmapRenderer(corrected, PixelSize);
         }
 
         /// <summary>
@@ -364,7 +364,7 @@ namespace CodeD
         /// <param name="XSize"></param>
         /// <param name="YSize"></param>
         /// <returns></returns>
-        public ZMappingData GetTrim(int x0, int y0, int xSizeNew, int ySizeNew)
+        public HeatmapRenderer GetTrim(int x0, int y0, int xSizeNew, int ySizeNew)
         {
             double[,] trimming = new double[xSizeNew, ySizeNew];
             for (int i = 0; i < xSizeNew; i++)
@@ -375,14 +375,14 @@ namespace CodeD
                 }
             }
 
-            return new ZMappingData(trimming, PixelSize);
+            return new HeatmapRenderer(trimming, PixelSize);
         }
 
         /// <summary>
         /// 反時計回りに90度回転した面を取得
         /// </summary>
         /// <returns></returns>
-        public ZMappingData GetRotateCCW()
+        public HeatmapRenderer GetRotateCCW()
         {
             double[,] rotated = new double[YSize, XSize];
             for (int i = 0; i < XSize; i++)
@@ -393,14 +393,14 @@ namespace CodeD
                 }
             }
 
-            return new ZMappingData(rotated, PixelSize);
+            return new HeatmapRenderer(rotated, PixelSize);
         }
 
         /// <summary>
         /// 時計回りに90度回転した面を取得
         /// </summary>
         /// <returns></returns>
-        public ZMappingData GetRotateCW()
+        public HeatmapRenderer GetRotateCW()
         {
             double[,] rotated = new double[YSize, XSize];
             for (int i = 0; i < XSize; i++)
@@ -411,7 +411,7 @@ namespace CodeD
                 }
             }
 
-            return new ZMappingData(rotated, PixelSize);
+            return new HeatmapRenderer(rotated, PixelSize);
         }
 
         /// <summary>
@@ -419,7 +419,7 @@ namespace CodeD
         /// </summary>
         /// <param name="rad"></param>
         /// <returns></returns>
-        public ZMappingData GetRotate(double rad)
+        public HeatmapRenderer GetRotate(double rad)
         {
             double cos, sin;
             int int_sin, int_cos; //桁落ち防止用
@@ -457,7 +457,7 @@ namespace CodeD
                 }
             }
 
-            return new ZMappingData(newZMap);
+            return new HeatmapRenderer(newZMap);
         }
 
         #endregion 簡易画像処理

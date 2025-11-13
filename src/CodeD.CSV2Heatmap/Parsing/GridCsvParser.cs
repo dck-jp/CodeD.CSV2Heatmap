@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CodeD
 {
-    public class ZMapParser
+    public class GridCsvParser
     {
         internal string Header { get; private set; }
         internal double[,] Data { get; private set; }
@@ -17,18 +17,18 @@ namespace CodeD
         internal double Max { get; private set; }
         internal double Min { get; private set; }
 
-        private ZMapParser()
+        private GridCsvParser()
         {
         }
 
-        public static async Task<ZMapParser> CreateAsync(string filename)
+        public static async Task<GridCsvParser> CreateAsync(string filename)
         {
-            var parser = new ZMapParser();
+            var parser = new GridCsvParser();
             await parser.ParseZMapFileAsync(filename);
             return parser;
         }
 
-        public ZMapParser(string filename)
+        public GridCsvParser(string filename)
         {
             ParseZMapFileAsync(filename).GetAwaiter().GetResult();
         }

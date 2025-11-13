@@ -8,7 +8,7 @@ using G_PROJECT;
 
 namespace CodeD
 {
-    public class XYZData
+    public class XyzCsvParser
     {
         public string Header { get; private set; }
 
@@ -18,7 +18,7 @@ namespace CodeD
         private int _MaxZColNum; // Number of columns
         private bool _LoadingSuccess;
 	
-        public XYZData(string filePath, int zColNum)
+        public XyzCsvParser(string filePath, int zColNum)
         {
             Encoding encoding;
             using (var txtEnc = new TxtEnc())
