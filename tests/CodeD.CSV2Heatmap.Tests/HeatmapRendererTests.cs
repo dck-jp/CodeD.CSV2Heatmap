@@ -13,30 +13,6 @@ namespace CodeD.Tests
     [TestClass()]
     public class HeatmapRendererTests
     {
-        //データ行1行 + 空白行
-        public readonly string testFilename01 = "test1.csv";
-        //データ行2行 + 空白行
-        public readonly string testFilename02 = "test2.csv";
-
-        [TestInitialize()]
-        public void Initialize()
-        {
-            var contents = @"0.1, 0.1, 0.1
-";
-            File.WriteAllText(testFilename01, contents);
-
-            var contents2 = @"0.1, 0.1, 0.1
-0.2, 0.2, 0.2
-";
-            File.WriteAllText(testFilename02, contents2);
-        }
-        [TestCleanup()]
-        public void Cleanup()
-        {
-            File.Delete(testFilename01);
-            File.Delete(testFilename02);
-        }
-
         [TestMethod]
         public void HeatmapRendererTest()
         {
@@ -48,6 +24,7 @@ namespace CodeD.Tests
         [TestMethod]
         public void HeatmapRendererTest_FileRead1()
         {
+            var testFilename01 = TestHelpers.GetTestFilePath("grid_test1.csv");
             var zmap = new HeatmapRenderer(testFilename01, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(1); //Y方向 
@@ -56,6 +33,7 @@ namespace CodeD.Tests
         [TestMethod()]
         public void HeatmapRendererTest_FileRead2()
         {
+            var testFilename02 = TestHelpers.GetTestFilePath("grid_test2.csv");
             var zmap = new HeatmapRenderer(testFilename02, 0);
             zmap.Data.GetLength(0).Is(3); //X方向
             zmap.Data.GetLength(1).Is(2); //X方向       
@@ -64,6 +42,7 @@ namespace CodeD.Tests
         [TestMethod()]
         public void ToBitmapTest()
         {
+            var testFilename01 = TestHelpers.GetTestFilePath("grid_test1.csv");
             var zmap = new HeatmapRenderer(testFilename01, 0);
             var bitmap = zmap.ToBitmap();
             bitmap.Width.Is(3);

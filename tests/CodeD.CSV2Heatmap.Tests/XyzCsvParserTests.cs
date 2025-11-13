@@ -8,17 +8,11 @@ namespace CodeD.Tests
     [TestClass]
     public class XyzCsvParserTests
     {
-        private string GetTestFilePath(string fileName)
-        {
-            // Get file path from TestData folder
-            return Path.Combine(Path.GetDirectoryName(typeof(XyzCsvParserTests).Assembly.Location), "TestData", fileName);
-        }
-
         [TestMethod]
         public void XyzCsvParser_TabSeparated_WithHeader_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_tab_separated.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
@@ -41,7 +35,7 @@ namespace CodeD.Tests
         public void XyzCsvParser_CommaSeparated_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_comma_separated.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_comma_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
@@ -63,7 +57,7 @@ namespace CodeD.Tests
         public void XyzCsvParser_RealData_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_real_data.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_real_data.txt");
             var zColNum = 3; // z1 column
 
             // Act
@@ -88,7 +82,7 @@ namespace CodeD.Tests
         public void XyzCsvParser_InvalidColumnNumber_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_tab_separated.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 10; // Invalid column number
 
             // Act
@@ -104,7 +98,7 @@ namespace CodeD.Tests
         public void XyzCsvParser_HeaderParsing_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_tab_separated.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
@@ -121,7 +115,7 @@ namespace CodeD.Tests
         public async System.Threading.Tasks.Task XyzCsvParser_CreateAsync_Test()
         {
             // Arrange
-            var filePath = GetTestFilePath("sample_tab_separated.txt");
+            var filePath = TestHelpers.GetTestFilePath("sample_tab_separated.txt");
             var zColNum = 3; // z1 column
 
             // Act
