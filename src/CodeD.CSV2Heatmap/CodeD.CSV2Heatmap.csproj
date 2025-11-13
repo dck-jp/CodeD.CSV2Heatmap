@@ -6,6 +6,23 @@
     <AssemblyName>CodeD.CSV2Heatmap</AssemblyName>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- Version Information -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    
+    <!-- Package Metadata -->
+    <Authors>dck-jp</Authors>
+    <Company>CodeD</Company>
+    <Product>CodeD.CSV2Heatmap</Product>
+    <Description>A .NET library for generating heatmap images from 2D map data (CSV format). Supports Grid Data (Height Map, Surface Map, Intensity Map, Raster Map) and Point Cloud Data (XYZ Format, Scatter Data, Tabular XYZ Data). Ideal for scientific data visualization including surface roughness measurement and X-ray focusing intensity distribution.</Description>
+    <Copyright>Copyright (c) 2025 dck-jp</Copyright>
+    <PackageProjectUrl>https://github.com/dck-jp/CodeD.CSV2Heatmap</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dck-jp/CodeD.CSV2Heatmap</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>heatmap;csv;visualization;image-processing;skiasharp;grid-data;height-map;surface-map;intensity-map;raster-map;point-cloud;xyz-format;scatter-data;2d-map;scientific-visualization</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

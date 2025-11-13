@@ -13,14 +13,8 @@ namespace CodeD
     /// HeatmapRenderer class
     /// (Two-dimensional array data visualization and simple image processing class)
     /// </summary>
-
     public class HeatmapRenderer
     {
-        private static int majourVersion = 2;
-        private static int minorVersion = 0;
-        private static int revisionVersion = 0;
-        public static string VersionInfo { get { return majourVersion.ToString() + "." + minorVersion.ToString() + "." + revisionVersion; } }
-
         private static SKColor[] color;
 
     public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
