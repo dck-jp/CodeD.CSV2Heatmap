@@ -10,12 +10,12 @@ namespace CodeD
 {
     public class GridCsvParser
     {
-        internal string Header { get; private set; }
-        internal double[,] Data { get; private set; }
-        internal int XSize { get; private set; }
-        internal int YSize { get; private set; }
-        internal double Max { get; private set; }
-        internal double Min { get; private set; }
+        public string Header { get; private set; }
+        public double[,] Data { get; private set; }
+        public int XSize { get; private set; }
+        public int YSize { get; private set; }
+        public double Max { get; private set; }
+        public double Min { get; private set; }
 
         private GridCsvParser()
         {

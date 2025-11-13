@@ -23,7 +23,7 @@ namespace CodeD.Tests
 
             // Act
             var xyz = new XyzCsvParser(filePath, zColNum);
-            var array = xyz.ToArray();
+            var array = xyz.Data;
             var header = xyz.Header;
 
             // Assert
@@ -46,7 +46,7 @@ namespace CodeD.Tests
 
             // Act
             var xyz = new XyzCsvParser(filePath, zColNum);
-            var array = xyz.ToArray();
+            var array = xyz.Data;
             var header = xyz.Header;
 
             // Assert
@@ -69,7 +69,7 @@ namespace CodeD.Tests
             // Act
             var xyz = new XyzCsvParser(filePath, zColNum);
             var header = xyz.Header;
-            var array = xyz.ToArray();
+            var array = xyz.Data;
 
             // Assert
             Assert.IsNotNull(xyz, "XYZData object should be created");
@@ -93,7 +93,7 @@ namespace CodeD.Tests
 
             // Act
             var xyz = new XyzCsvParser(filePath, zColNum);
-            var array = xyz.ToArray();
+            var array = xyz.Data;
 
             // Assert
             Assert.IsNotNull(xyz, "XYZData object should be created");
@@ -115,6 +115,29 @@ namespace CodeD.Tests
             Assert.IsTrue(xyz.Header.Length > 0, "Header should not be empty");
             var headerLines = xyz.Header.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             Assert.IsTrue(headerLines.Length >= 2, "Header should have 2 or more lines");
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task XyzCsvParser_CreateAsync_Test()
+        {
+            // Arrange
+            var filePath = GetTestFilePath("sample_tab_separated.txt");
+            var zColNum = 3; // z1 column
+
+            // Act
+            var xyz = await XyzCsvParser.CreateAsync(filePath, zColNum);
+            var array = xyz.Data;
+            var header = xyz.Header;
+
+            // Assert
+            Assert.IsNotNull(xyz, "XyzCsvParser object should be created");
+            Assert.IsNotNull(array, "Array should be generated");
+            Assert.IsTrue(header.Contains("header1"), "Header information should be included");
+            Assert.IsTrue(header.Contains("header2"), "Header information should be included");
+            
+            // Array size check (3x2 grid data)
+            Assert.AreEqual(3, array.GetLength(0), "X dimension size should be correct");
+            Assert.AreEqual(2, array.GetLength(1), "Y dimension size should be correct");
         }
     }
 }

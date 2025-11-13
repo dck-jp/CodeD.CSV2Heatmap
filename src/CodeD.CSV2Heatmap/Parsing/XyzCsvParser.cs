@@ -11,14 +11,35 @@ namespace CodeD
     public class XyzCsvParser
     {
         public string Header { get; private set; }
+        public double[,] Data { get; private set; }
+        public int XSize { get; private set; }
+        public int YSize { get; private set; }
+        public double Max { get; private set; }
+        public double Min { get; private set; }
 
         private List<double> _X = new List<double>();
         private List<double> _Y = new List<double>();
         private List<double> _Z = new List<double>();
         private int _MaxZColNum; // Number of columns
         private bool _LoadingSuccess;
-	
+
+        private XyzCsvParser()
+        {
+        }
+
+        public static async Task<XyzCsvParser> CreateAsync(string filePath, int zColNum)
+        {
+            var parser = new XyzCsvParser();
+            await parser.ParseXyzFileAsync(filePath, zColNum);
+            return parser;
+        }
+
         public XyzCsvParser(string filePath, int zColNum)
+        {
+            ParseXyzFileAsync(filePath, zColNum).GetAwaiter().GetResult();
+        }
+
+        private async Task ParseXyzFileAsync(string filePath, int zColNum)
         {
             Encoding encoding;
             using (var txtEnc = new TxtEnc())
@@ -38,8 +59,18 @@ namespace CodeD
             _MaxZColNum = rawDataLines[0].Trim().Split(splitter, StringSplitOptions.RemoveEmptyEntries).Length;
             if (_MaxZColNum < zColNum) return;
 
-            ExtractXYZ(rawDataLines, zColNum, splitter);
+            await Task.Run(() => ExtractXYZ(rawDataLines, zColNum, splitter));
             _LoadingSuccess = true;
+            
+            // Convert to 2D array and set properties
+            Data = ToArray();
+            if (Data != null)
+            {
+                XSize = Data.GetLength(0);
+                YSize = Data.GetLength(1);
+                Max = Data.Cast<double>().Max();
+                Min = Data.Cast<double>().Min();
+            }
         }
 
         private void ExtractXYZ(string[] rawDataLines, int zColNum, char[] splitter)
@@ -139,7 +170,7 @@ namespace CodeD
             Header = sb.ToString();
         }
         	
-        public double[,] ToArray()
+        private double[,] ToArray()
         {
             if (!_LoadingSuccess) return null;
 
