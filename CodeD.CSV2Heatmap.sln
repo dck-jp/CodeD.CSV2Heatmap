@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeD.CSV2Heatmap", "CodeD.CSV2Heatmap.csproj", "{E80BCB74-3590-4D4D-8CA5-538429A0D707}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeD.CSV2Heatmap", "src\CodeD.CSV2Heatmap\CodeD.CSV2Heatmap.csproj", "{E80BCB74-3590-4D4D-8CA5-538429A0D707}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeD.CSV2Heatmap.Tests", "CodeD.CSV2Heatmap.Tests\CodeD.CSV2Heatmap.Tests.csproj", "{26016CAE-C235-47EC-A564-63F3DD28994A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeD.CSV2Heatmap.Tests", "tests\CodeD.CSV2Heatmap.Tests\CodeD.CSV2Heatmap.Tests.csproj", "{26016CAE-C235-47EC-A564-63F3DD28994A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
