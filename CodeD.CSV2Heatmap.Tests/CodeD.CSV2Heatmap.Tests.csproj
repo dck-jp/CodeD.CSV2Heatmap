@@ -2,9 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>CodeD.Data.ZMappingDataTests</RootNamespace>
-    <AssemblyName>CodeD.Data.ZMappingDataTests</AssemblyName>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <RootNamespace>CodeD.Tests</RootNamespace>
+    <AssemblyName>CodeD.CSV2Heatmap.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -17,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../CodeD.Data.ZMappingData.csproj" />
+    <ProjectReference Include="../CodeD.CSV2Heatmap.csproj" />
   </ItemGroup>
 
 </Project>

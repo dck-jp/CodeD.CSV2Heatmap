@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using CodeD.Data;
+using CodeD;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
 
-namespace CodeD.Data.Tests
+namespace CodeD.Tests
 {
     [TestClass()]
     public class ZMappingDataTests
