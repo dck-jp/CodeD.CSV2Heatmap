@@ -34,9 +34,9 @@ namespace CodeD
         }
 
         /// <summary>
-        /// ZMapファイルをパースしてdouble型二次元配列をメンバ変数にセット
-        /// ※１　区切り文字は、タブ、コンマ、半角空白
-        /// ※２　データ点数が足りない場合、不正な値の場合、NaNを代入
+        /// Parse Grid data (CSV file) and set a two-dimensional double array to member variables
+        /// Note 1: Delimiter characters are tab, comma, and space
+        /// Note 2: If there are insufficient data points or invalid values, NaN is assigned
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="p"></param>
@@ -67,14 +67,14 @@ namespace CodeD
 
                     for (int i = 0; i < XSize; i++)
                     {
-                        if (!(i < line.Length)) Data[i, j] = double.NaN; //データ点数が足りない場合
+                        if (!(i < line.Length)) Data[i, j] = double.NaN; // When data points are insufficient
                         else if (Double.TryParse(line[i], out parsed) && parsed != double.NaN) Data[i, j] = parsed;
-                        else Data[i, j] = double.NaN; //parse不可能な場合
+                        else Data[i, j] = double.NaN; // When parsing is not possible
                     }
                 }
             };
 
-            // 非同期並列処理でパフォーマンスを向上
+            // Improve performance with asynchronous parallel processing
             var tasks = new Task[threadNum];
             for (int i = 0; i < threadNum; i++) 
             {
@@ -89,7 +89,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 末尾の空白行は削除する
+        /// Remove trailing blank lines
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
@@ -99,7 +99,7 @@ namespace CodeD
             var encoding = enc.SetFromTextFile(filename);
             if (encoding == null)
             {
-                encoding = System.Text.Encoding.UTF8; // デフォルトエンコーディングとしてUTF-8を使用
+                encoding = System.Text.Encoding.UTF8; // Use UTF-8 as default encoding
             }
             var rawDataLines = File.ReadAllLines(filename, encoding);
             if (rawDataLines[rawDataLines.Length - 1] == "")
@@ -117,33 +117,33 @@ namespace CodeD
         }
 
         /// <summary>
-        /// ファイルの先頭部分において
-        /// 数値以外のものが含まれている場合
-        /// 数値のみのラインが現れるまでスキップし、
-        /// 当該ライン以降を返す
+        /// At the beginning of the file,
+        /// if non-numeric data is present,
+        /// skip until a line with only numeric values appears,
+        /// and return that line and subsequent lines
         /// </summary>
         /// <param name="data"></param>
         private string[] SplitHeader(string[] data)
         {
             var bodyDataBeginLine = SearchBodyBeginLine(data);
-            if (bodyDataBeginLine == -1) // データが全くない場合
+            if (bodyDataBeginLine == -1) // When there is no data at all
             {
                 SetHeader(data.ToList());
                 return new string[] { };
             }
-            else //データがある場合
+            else // When there is data
             {
                 List<string> bodyData = new List<string>();
-                //Headerデータ格納
+                // Store header data
                 SetHeader(data.Take(bodyDataBeginLine - 1).ToList());
-                //Bodyデータ返却
+                // Return body data
                 return data.Skip(bodyDataBeginLine - 1).ToArray();
             }
         }
 
         /// <summary>
-        /// データ本体のスタート位置を探す
-        /// ※　データ全くない場合は -1 を返す
+        /// Search for the start position of the data body
+        /// Note: Returns -1 if there is no data at all
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
@@ -152,7 +152,7 @@ namespace CodeD
             var i = 0;
             while (ContainsString(data[i]))
             {
-                if (i == data.Length - 1) // 最終行まで到達した場合
+                if (i == data.Length - 1) // When reached the last line
                 {
                     i = -1;
                     break;
@@ -163,7 +163,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 文字列にしてHeaderプロパティにセット
+        /// Convert to string and set to Header property
         /// </summary>
         /// <param name="headerData"></param>
         private void SetHeader(List<string> headerData)
@@ -179,9 +179,9 @@ namespace CodeD
         }
 
         /// <summary>
-        /// データに数値以外(文字列)が含まれているか
+        /// Check if the data contains non-numeric values (strings)
         /// </summary>
-        /// <param name="v">CSVファイルの１行分のデータ</param>
+        /// <param name="v">Data for one line of the CSV file</param>
         /// <returns></returns>
         private bool ContainsString(string v)
         {
@@ -191,7 +191,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 配列の要素内に数値以外が含まれているかチェック
+        /// Check if array elements contain non-numeric values
         /// </summary>
         /// <param name="tempLine"></param>
         /// <returns></returns>
@@ -206,7 +206,7 @@ namespace CodeD
                 if (!double.TryParse(tempLine[i], out trash))
                 {
                     containsString = true;
-                    break; //数値じゃなかったら終了
+                    break; // Exit if not numeric
                 }
             }
 

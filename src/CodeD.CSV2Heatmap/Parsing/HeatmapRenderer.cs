@@ -10,8 +10,8 @@ using SkiaSharp;
 namespace CodeD
 {
     /// <summary>
-    /// HeatmapRendererクラス
-    /// (弐次元配列データ可視化・簡易画像処理クラス)
+    /// HeatmapRenderer class
+    /// (Two-dimensional array data visualization and simple image processing class)
     /// </summary>
 
     public class HeatmapRenderer
@@ -80,7 +80,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// bitmapに変換
+        /// Convert to bitmap
         /// </summary>
         /// <param name="min"></param>
         /// <param name="max"></param>
@@ -101,7 +101,7 @@ namespace CodeD
                 
                 Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
                 
-                // 並列処理版: 計算とSetPixelを分離して並列化（データサイズが十分大きい場合のみ）
+                // Parallel processing version: Separate calculation and SetPixel for parallelization (only when data size is large enough)
                 int totalPixels = XSize * YSize;
                 if (Vector.IsHardwareAccelerated && totalPixels >= 256)
                 {
@@ -109,7 +109,7 @@ namespace CodeD
                 }
                 else
                 {
-                    // フォールバック: 従来の処理
+                    // Fallback: Traditional processing
                     for (int x = 0; x < XSize; x++)
                     {
                         for (int y = 0; y < YSize; y++)
@@ -207,12 +207,12 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 並列処理を使用した高速ビットマップ処理
+        /// High-speed bitmap processing using parallel processing
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessBitmapSIMD(SKBitmap bitmap, Func<int, int, int> colorFunc)
         {
-            // 先に全カラー値を計算（並列化 + SIMD）
+            // First calculate all color values (parallelization + SIMD)
             int[,] colorIndices = new int[XSize, YSize];
             
             Parallel.For(0, XSize, x =>
@@ -220,7 +220,7 @@ namespace CodeD
                 int y = 0;
                 int vectorSize = Vector<double>.Count;
                 
-                // SIMD処理: Vector<double>を使用して複数要素を同時処理
+                // SIMD processing: Process multiple elements simultaneously using Vector<double>
                 if (vectorSize > 1)
                 {
                     var minVec = new Vector<double>(764.0);
@@ -229,18 +229,18 @@ namespace CodeD
                     
                     for (; y <= YSize - vectorSize; y += vectorSize)
                     {
-                        // ベクトル化して計算
+                        // Vectorize and calculate
                         for (int v = 0; v < vectorSize; v++)
                         {
                             values[v] = colorFunc(x, y + v);
                         }
                         
                         var vec = new Vector<double>(values);
-                        // クランプ: min(max(vec, 0), 764)
+                        // Clamp: min(max(vec, 0), 764)
                         vec = Vector.Max(vec, maxVec);
                         vec = Vector.Min(vec, minVec);
                         
-                        // 結果を配列に格納
+                        // Store results in array
                         for (int v = 0; v < vectorSize; v++)
                         {
                             colorIndices[x, y + v] = (int)vec[v];
@@ -248,7 +248,7 @@ namespace CodeD
                     }
                 }
                 
-                // 残りの要素を処理
+                // Process remaining elements
                 for (; y < YSize; y++)
                 {
                     int number = colorFunc(x, y);
@@ -258,7 +258,7 @@ namespace CodeD
                 }
             });
             
-            // ピクセルデータに直接アクセスして並列化
+            // Direct access to pixel data for parallelization
             unsafe
             {
                 var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
@@ -276,7 +276,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 黒→紫→白の配色作成
+        /// Create black → purple → white color scheme
         /// </summary>
         /// <param name="color"></param>
         private void SetBlackPurpleWhiteColors(ref SKColor[] color)
@@ -295,7 +295,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// モノクロ配色作成
+        /// Create monochrome color scheme
         /// </summary>
         /// <param name="color"></param>
         private void SetMonochromeColors(ref SKColor[] color)
@@ -309,7 +309,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// AV似非似の配色作成
+        /// Create AV pseudo-like color scheme
         /// </summary>
         /// <param name="color"></param>
         private void SetRainbowColors(ref SKColor[] color)
@@ -329,7 +329,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// ファイルに保存
+        /// Save to file
         /// </summary>
         /// <param name="filename"></param>
         public void SaveAs(string filename)
@@ -349,7 +349,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 指定列のデータを配列で返す
+        /// Return the data for the specified column as an array
         /// </summary>
         /// <param name="rowNumber"></param>
         /// <returns></returns>
@@ -365,7 +365,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 指定行のデータを配列で返す
+        /// Return the data for the specified row as an array
         /// </summary>
         /// <param name="columnNumber"></param>
         /// <returns></returns>
@@ -383,8 +383,8 @@ namespace CodeD
         #region 簡易画像処理
 
         /// <summary>
-        /// 平面補正した面を取得(要PixelPitchの設定)
-        /// ApplicationException: PixelPitch未設定時
+        /// Get plane-corrected surface (requires PixelPitch setting)
+        /// ApplicationException: When PixelPitch is not set
         /// </summary>
         /// <returns></returns>
         public HeatmapRenderer GetPlaneCorrection()
@@ -439,7 +439,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// トリミングした面を取得
+        /// Get trimmed surface
         /// </summary>
         /// <param name="x0"></param>
         /// <param name="y0"></param>
@@ -461,7 +461,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 反時計回りに90度回転した面を取得
+        /// Get surface rotated 90 degrees counterclockwise
         /// </summary>
         /// <returns></returns>
         public HeatmapRenderer GetRotateCCW()
@@ -479,7 +479,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 時計回りに90度回転した面を取得
+        /// Get surface rotated 90 degrees clockwise
         /// </summary>
         /// <returns></returns>
         public HeatmapRenderer GetRotateCW()
@@ -497,7 +497,7 @@ namespace CodeD
         }
 
         /// <summary>
-        /// 反時計回りに任意角度回転した面を取得
+        /// Get surface rotated counterclockwise by arbitrary angle
         /// </summary>
         /// <param name="rad"></param>
         /// <returns></returns>
@@ -514,7 +514,7 @@ namespace CodeD
             int_cos = (int)(Math.Cos(rad) * 1024);
             int_sin = (int)(Math.Sin(rad) * 1024);
 
-            // +0.5で小数点切り上げ
+            // +0.5 for rounding up decimals
             dw = (int)(Math.Abs(XSize * cos) + Math.Abs(XSize * sin) + 0.5);
             dh = (int)(Math.Abs(YSize * cos) + Math.Abs(YSize * sin) + 0.5);
 
@@ -542,6 +542,6 @@ namespace CodeD
             return new HeatmapRenderer(newZMap);
         }
 
-        #endregion 簡易画像処理
+        #endregion Simple image processing
     }
 }
