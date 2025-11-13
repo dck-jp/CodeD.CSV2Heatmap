@@ -33,7 +33,7 @@ Both grid‑based and XYZ‑based data structures are supported, enabling effici
 
 ## Installation
 
-### NuGet Package (planned)
+### NuGet Package
 
 ```bash
 dotnet add package CodeD.CSV2Heatmap

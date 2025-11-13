@@ -76,11 +76,11 @@ namespace CodeD
         /// <summary>
         /// Convert to bitmap
         /// </summary>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        /// <param name="colorMode"></param>
-        /// <param name="mode"></param>
-        /// <returns></returns>
+        /// <param name="min">Minimum value for color mapping (null for auto)</param>
+        /// <param name="max">Maximum value for color mapping (null for auto)</param>
+        /// <param name="colorMode">Color mode for the heatmap</param>
+        /// <param name="convertMode">Data conversion mode (None, ln, log)</param>
+        /// <returns>Generated bitmap image</returns>
         public SKBitmap ToBitmap(double? min = null, double? max = null, ColorMode colorMode = ColorMode.Rainbow, ConvertMode convertMode = ConvertMode.None)
         {
             CreateColorMap(colorMode);
@@ -345,8 +345,8 @@ namespace CodeD
         /// <summary>
         /// Return the data for the specified column as an array
         /// </summary>
-        /// <param name="rowNumber"></param>
-        /// <returns></returns>
+        /// <param name="columnNumber">Column index to retrieve</param>
+        /// <returns>Array of column data</returns>
         public double[] GetColumnData(int columnNumber)
         {
             double[] columnData = new double[YSize];
@@ -361,8 +361,8 @@ namespace CodeD
         /// <summary>
         /// Return the data for the specified row as an array
         /// </summary>
-        /// <param name="columnNumber"></param>
-        /// <returns></returns>
+        /// <param name="rowNumber">Row index to retrieve</param>
+        /// <returns>Array of row data</returns>
         public double[] GetRowData(int rowNumber)
         {
             double[] rowData = new double[XSize];
@@ -435,11 +435,11 @@ namespace CodeD
         /// <summary>
         /// Get trimmed surface
         /// </summary>
-        /// <param name="x0"></param>
-        /// <param name="y0"></param>
-        /// <param name="XSize"></param>
-        /// <param name="YSize"></param>
-        /// <returns></returns>
+        /// <param name="x0">Starting X coordinate</param>
+        /// <param name="y0">Starting Y coordinate</param>
+        /// <param name="xSizeNew">Width of trimmed area</param>
+        /// <param name="ySizeNew">Height of trimmed area</param>
+        /// <returns>Trimmed HeatmapRenderer instance</returns>
         public HeatmapRenderer GetTrim(int x0, int y0, int xSizeNew, int ySizeNew)
         {
             double[,] trimming = new double[xSizeNew, ySizeNew];

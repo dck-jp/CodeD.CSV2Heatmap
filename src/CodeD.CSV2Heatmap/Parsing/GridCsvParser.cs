@@ -38,8 +38,7 @@ namespace CodeD
         /// Note 1: Delimiter characters are tab, comma, and space
         /// Note 2: If there are insufficient data points or invalid values, NaN is assigned
         /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="p"></param>
+        /// <param name="filename">Path to the CSV file to parse</param>
         private async Task ParseZMapFileAsync(string filename)
         {
             string[] rawDataLines = CreateRawData(filename);

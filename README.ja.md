@@ -33,7 +33,7 @@
 
 ## インストール
 
-### NuGetパッケージ（予定）
+### NuGetパッケージ
 
 ```bash
 dotnet add package CodeD.CSV2Heatmap
