@@ -380,7 +380,7 @@ namespace CodeD
             return rowData;
         }
 
-        #region 簡易画像処理
+        #region Image Processing
 
         /// <summary>
         /// Get plane-corrected surface (requires PixelPitch setting)
@@ -504,7 +504,7 @@ namespace CodeD
         public HeatmapRenderer GetRotate(double rad)
         {
             double cos, sin;
-            int int_sin, int_cos; //桁落ち防止用
+            int int_sin, int_cos; //Guard against catastrophic cancellation
             int dw, dh;
             int sCX, sCY, dCX, dCY;
 
