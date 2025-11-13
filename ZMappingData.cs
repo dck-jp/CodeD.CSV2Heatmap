@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+#endif
 
 namespace CodeD.Data
 {
@@ -20,14 +22,18 @@ namespace CodeD.Data
         private static int revisionVersion = 0;
         public static string VersionInfo { get { return majourVersion.ToString() + "." + minorVersion.ToString() + "." + revisionVersion; } }
 
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
         private static Color[] color;
+#endif
 
-        public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
+    public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
 
-        public enum ConvertMode { None, ln, log };
+    public enum ConvertMode { None, ln, log };
 
-        public Color OutOfRangeColor { get; set; }
-        public bool EnablesOutOfRangeColor { get; set; }
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
+    public Color OutOfRangeColor { get; set; }
+    public bool EnablesOutOfRangeColor { get; set; }
+#endif
 
         public int XSize { get; private set; }
         public int YSize { get; private set; }
@@ -46,7 +52,9 @@ namespace CodeD.Data
             PixelSize = pixelSize;
 
             Header = header;
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
             EnablesOutOfRangeColor = false;
+#endif
         }
 
         public ZMappingData(string filename, double pixelSize = 0)
@@ -59,9 +67,12 @@ namespace CodeD.Data
             Max = parser.Max;
             Min = parser.Min;
             PixelSize = pixelSize;
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
             EnablesOutOfRangeColor = false;
+#endif
         }
 
+#if !NETSTANDARD2_0_EXCLUDE_DRAWING
         /// <summary>
         /// bitmapに変換
         /// </summary>
@@ -251,6 +262,7 @@ namespace CodeD.Data
                 color[i] = Color.FromArgb(255, 765 - i, 0);
             }
         }
+#endif
 
         /// <summary>
         /// ファイルに保存
