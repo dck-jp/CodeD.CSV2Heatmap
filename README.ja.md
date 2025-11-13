@@ -260,21 +260,10 @@ dotnet test
 
 **dck-jp**
 
-## 関連リンク
-
-- [SkiaSharp](https://github.com/mono/SkiaSharp) - クロスプラットフォームな2Dグラフィックスライブラリ
-- [.NET Standard](https://docs.microsoft.com/en-us/dotnet/standard/net-standard) - .NET実装間の共通API
 
 ## 変更履歴
 
-### Version 1.0.0
-
-- 初回リリース
-- GridCSV形式のサポート
-- XYZ形式のサポート
-- 複数のカラーモード実装
-- SIMD最適化による高速化
-- 基本的な画像処理機能
+[CHANGELOG.md](CHANGELOG.md) を確認お願いします
 
 ---
 

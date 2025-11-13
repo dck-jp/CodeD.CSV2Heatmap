@@ -220,21 +220,10 @@ Pull requests are welcome. For major changes, open an issue first.
 
 **dck-jp**
 
-## Related Links
-
-- SkiaSharp — cross‑platform 2D graphics library  
-- .NET Standard — common API set
 
 ## Changelog
 
-### Version 1.0.0
-
-- Initial release  
-- GridCSV support  
-- XYZ support  
-- Multiple color modes  
-- SIMD‑accelerated rendering  
-- Basic image‑processing tools  
+See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes.
 
 ---
 

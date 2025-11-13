@@ -8,9 +8,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     
     <!-- Version Information -->
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
     
     <!-- Package Metadata -->
     <Authors>dck-jp</Authors>
@@ -25,7 +25,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v1.0.1: Updated README for better NuGet.org display. v1.0.0: Initial release with Grid Data and XYZ Point Cloud support, multiple color modes, and SIMD-optimized rendering.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.0.2: Fixed deadlock issues in GUI applications by adding ConfigureAwait(false) to async calls and removing sync constructors. v1.0.1: Updated README for better NuGet.org display. v1.0.0: Initial release with Grid Data and XYZ Point Cloud support, multiple color modes, and SIMD-optimized rendering.</PackageReleaseNotes>
     
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
