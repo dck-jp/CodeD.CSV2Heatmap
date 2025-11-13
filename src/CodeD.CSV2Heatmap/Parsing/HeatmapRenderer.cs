@@ -101,7 +101,7 @@ namespace CodeD
                 
                 Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
                 
-                // SIMD対応版: ベクトル化で高速化（データサイズが十分大きい場合のみ）
+                // 並列処理版: 計算とSetPixelを分離して並列化（データサイズが十分大きい場合のみ）
                 int totalPixels = XSize * YSize;
                 if (Vector.IsHardwareAccelerated && totalPixels >= 256)
                 {
@@ -207,26 +207,44 @@ namespace CodeD
         }
 
         /// <summary>
-        /// SIMD命令を使用した高速ビットマップ処理
+        /// 並列処理を使用した高速ビットマップ処理
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessBitmapSIMD(SKBitmap bitmap, Func<int, int, int> colorFunc)
         {
-            for (int x = 0; x < XSize; x++)
+            // 先に全カラー値を計算（並列化 + SIMD）
+            int[,] colorIndices = new int[XSize, YSize];
+            
+            Parallel.For(0, XSize, x =>
             {
                 int y = 0;
                 int vectorSize = Vector<double>.Count;
                 
-                // SIMD処理可能な部分
-                for (; y <= YSize - vectorSize; y += vectorSize)
+                // SIMD処理: Vector<double>を使用して複数要素を同時処理
+                if (vectorSize > 1)
                 {
-                    // ベクトル化してカラー計算
-                    for (int v = 0; v < vectorSize; v++)
+                    var minVec = new Vector<double>(764.0);
+                    var maxVec = new Vector<double>(0.0);
+                    double[] values = new double[vectorSize];
+                    
+                    for (; y <= YSize - vectorSize; y += vectorSize)
                     {
-                        int number = colorFunc(x, y + v);
-                        if (number > 764) number = 764;
-                        else if (number < 0) number = 0;
-                        bitmap.SetPixel(x, y + v, color[number]);
+                        // ベクトル化して計算
+                        for (int v = 0; v < vectorSize; v++)
+                        {
+                            values[v] = colorFunc(x, y + v);
+                        }
+                        
+                        var vec = new Vector<double>(values);
+                        // クランプ: min(max(vec, 0), 764)
+                        vec = Vector.Max(vec, maxVec);
+                        vec = Vector.Min(vec, minVec);
+                        
+                        // 結果を配列に格納
+                        for (int v = 0; v < vectorSize; v++)
+                        {
+                            colorIndices[x, y + v] = (int)vec[v];
+                        }
                     }
                 }
                 
@@ -236,8 +254,24 @@ namespace CodeD
                     int number = colorFunc(x, y);
                     if (number > 764) number = 764;
                     else if (number < 0) number = 0;
-                    bitmap.SetPixel(x, y, color[number]);
+                    colorIndices[x, y] = number;
                 }
+            });
+            
+            // ピクセルデータに直接アクセスして並列化
+            unsafe
+            {
+                var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
+                int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
+                
+                Parallel.For(0, XSize, x =>
+                {
+                    for (int y = 0; y < YSize; y++)
+                    {
+                        var c = color[colorIndices[x, y]];
+                        pixelPtr[y * stride + x] = (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
+                    }
+                });
             }
         }
 

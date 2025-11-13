@@ -5,6 +5,7 @@
     <RootNamespace>CodeD</RootNamespace>
     <AssemblyName>CodeD.CSV2Heatmap</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
