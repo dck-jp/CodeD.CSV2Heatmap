@@ -49,8 +49,14 @@ dotnet build src/CodeD.CSV2Heatmap/CodeD.CSV2Heatmap.csproj -c Release
 
 ## Requirements
 
-- .NET Standard 2.0 or later  
-- SkiaSharp 2.88.8 or later
+- .NET Standard 2.0 or later
+
+## Dependencies
+
+This library uses the following NuGet packages:
+
+- **SkiaSharp** 2.88.8 or later - Cross-platform 2D graphics library for image generation and processing
+- **UTF.Unknown** 2.5.1 - Character encoding detection library for CSV file parsing
 
 ## Usage
 

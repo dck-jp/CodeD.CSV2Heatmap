@@ -50,7 +50,13 @@ dotnet build src/CodeD.CSV2Heatmap/CodeD.CSV2Heatmap.csproj -c Release
 ## 必要要件
 
 - .NET Standard 2.0 以上
-- SkiaSharp 2.88.8 以上
+
+## 依存関係
+
+このライブラリは以下のNuGetパッケージを使用しています：
+
+- **SkiaSharp** 2.88.8 以上 - 画像生成・画像処理のためのクロスプラットフォーム2Dグラフィックスライブラリ
+- **UTF.Unknown** 2.5.1 - CSVファイルのパースに使用する文字エンコーディング検出ライブラリ
 
 ## 使い方
 
