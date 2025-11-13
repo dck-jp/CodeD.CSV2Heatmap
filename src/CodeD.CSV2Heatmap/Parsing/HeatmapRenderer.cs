@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using SkiaSharp;
@@ -98,15 +100,26 @@ namespace CodeD
                 var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
                 
                 Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
-                for (int x = 0; x < XSize; x++)
+                
+                // SIMD対応版: ベクトル化で高速化（データサイズが十分大きい場合のみ）
+                int totalPixels = XSize * YSize;
+                if (Vector.IsHardwareAccelerated && totalPixels >= 256)
                 {
-                    for (int y = 0; y < YSize; y++)
+                    ProcessBitmapSIMD(bitmap, colorFunc);
+                }
+                else
+                {
+                    // フォールバック: 従来の処理
+                    for (int x = 0; x < XSize; x++)
                     {
-                        int number = colorFunc(x, y);
-                        if (number > 764) { number = 764; }
-                        else if (number < 0) { number = 0; }
-                        var _color = color[number];
-                        bitmap.SetPixel(x, y, _color);
+                        for (int y = 0; y < YSize; y++)
+                        {
+                            int number = colorFunc(x, y);
+                            if (number > 764) { number = 764; }
+                            else if (number < 0) { number = 0; }
+                            var _color = color[number];
+                            bitmap.SetPixel(x, y, _color);
+                        }
                     }
                 }
 
@@ -191,6 +204,41 @@ namespace CodeD
             }
 
             return calcColor;
+        }
+
+        /// <summary>
+        /// SIMD命令を使用した高速ビットマップ処理
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessBitmapSIMD(SKBitmap bitmap, Func<int, int, int> colorFunc)
+        {
+            for (int x = 0; x < XSize; x++)
+            {
+                int y = 0;
+                int vectorSize = Vector<double>.Count;
+                
+                // SIMD処理可能な部分
+                for (; y <= YSize - vectorSize; y += vectorSize)
+                {
+                    // ベクトル化してカラー計算
+                    for (int v = 0; v < vectorSize; v++)
+                    {
+                        int number = colorFunc(x, y + v);
+                        if (number > 764) number = 764;
+                        else if (number < 0) number = 0;
+                        bitmap.SetPixel(x, y + v, color[number]);
+                    }
+                }
+                
+                // 残りの要素を処理
+                for (; y < YSize; y++)
+                {
+                    int number = colorFunc(x, y);
+                    if (number > 764) number = 764;
+                    else if (number < 0) number = 0;
+                    bitmap.SetPixel(x, y, color[number]);
+                }
+            }
         }
 
         /// <summary>
