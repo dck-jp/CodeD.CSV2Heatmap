@@ -22,6 +22,9 @@ namespace CodeD
         private static SKColor[] _monochromeCache;
         private static SKColor[] _blackPurpleWhiteCache;
 
+        // SIMD vector size (pre-calculated for performance)
+        private static readonly int VectorSize = Vector<double>.Count;
+
         public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
 
         public enum ConvertMode { None, ln, log };
@@ -244,10 +247,9 @@ namespace CodeD
             {
                 int baseIndex  = x * height;
                 int y          = 0;
-                int vectorSize = Vector<double>.Count;
                 
                 // SIMD processing: Process multiple elements simultaneously using Vector<double>
-                if (vectorSize > 1)
+                if (VectorSize > 1)
                 {
                     var minVec = new Vector<double>(764.0);
                     var maxVec = Vector<double>.Zero;
@@ -258,7 +260,7 @@ namespace CodeD
                         fixed (double* ptr = &Data[x, 0])
                         {
                             Span<double> values = stackalloc double[8];
-                            if (vectorSize > values.Length) vectorSize = values.Length;
+                            int vectorSize = VectorSize > values.Length ? values.Length : VectorSize;
 
                             for (; y <= height - vectorSize; y += vectorSize)
                             {

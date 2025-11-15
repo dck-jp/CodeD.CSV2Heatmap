@@ -90,3 +90,29 @@ dotnet run -c Release -p benchmarks/CodeD.CSV2Heatmap.Benchmarks/CodeD.CSV2Heatm
 - **技術**: ゼロアロケーション + カラーマップキャッシュで持続的な低メモリ実現
 
 
+## Optimization v3: Pre-calculate Vector<double>.Count (2025-11-16, branch perf/heatmap-renderer)
+
+Environment: Windows 11, .NET 8.0.22, 13th Gen Intel Core i9-13900F
+
+Changes:
+- Introduced `private static readonly int VectorSize = Vector<double>.Count;` in `HeatmapRenderer`.
+- Replaced per-iteration `Vector<double>.Count` property reads in hot paths with the cached `VectorSize`.
+- No functional changes; micro-optimization to reduce overhead in the SIMD loop.
+
+Results (vs v2):
+
+| Case | Mean | Alloc | v2 | Δ Speed | Δ Memory |
+|---|---:|---:|---:|---:|---:|
+| ToBitmap Medium None | 39.712 us | 13.02 KB | 40.686 us / 13.12 KB | +2.4% | -0.8% |
+| ToBitmap Medium log | 41.767 us | 9.19 KB | 38.561 us / 10.34 KB | -8.3% | -11.1% |
+| ToBitmap Medium ln | 43.479 us | 9.20 KB | 44.819 us / 9.00 KB | +3.0% | +2.2% |
+| ToBitmap Large None | 114.303 us | 10.04 KB | 120.049 us / 10.01 KB | +4.8% | +0.3% |
+| ToBitmap XLarge None | 1.638 ms | 17.14 KB | 1.687 ms / 17.24 KB | +2.9% | -0.6% |
+| PlaneCorrection Medium | 13.162 us | 32.12 KB | 12.982 us / 32.12 KB | -1.4% | ±0% |
+| RotateCW Medium | 4.391 us | 32.12 KB | 4.300 us / 32.12 KB | -2.1% | ±0% |
+
+Notes:
+- The change targets the rendering SIMD loop; non-render methods (Plane/Rotate) are unaffected functionally. Minor variance is expected.
+- The largest gains appear on Large/XLarge sizes where loop overhead accumulates.
+
+
