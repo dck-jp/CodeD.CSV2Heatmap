@@ -110,27 +110,45 @@ namespace CodeD
                 if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min, max, convertMode);
 
                 var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
-                
-                Func<int, int, int> colorFunc = CreateFormula(min, max, convertMode);
-                
+
                 // Parallel processing version: Separate calculation and SetPixel for parallelization (only when data size is large enough)
                 int totalPixels = XSize * YSize;
                 if (Vector.IsHardwareAccelerated && totalPixels >= 256)
                 {
-                    ProcessBitmapSIMD(bitmap, colorFunc);
+                    ProcessBitmapSIMD(bitmap, min.Value, max.Value, convertMode);
                 }
                 else
                 {
-                    // Fallback: Traditional processing
+                    // Fallback: Traditional processing without delegate overhead
+                    double minVal = min.Value;
+                    double maxVal = max.Value;
+                    double range = (maxVal - minVal);
+                    double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
+                    double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
+                    double scale = range != 0.0 ? 764.0 / range : 0.0;
                     for (int x = 0; x < XSize; x++)
                     {
                         for (int y = 0; y < YSize; y++)
                         {
-                            int number = colorFunc(x, y);
-                            if (number > 764) { number = 764; }
-                            else if (number < 0) { number = 0; }
-                            var _color = color[number];
-                            bitmap.SetPixel(x, y, _color);
+                            double v = Data[x, y];
+                            int number;
+                            switch (convertMode)
+                            {
+                                case ConvertMode.None:
+                                    number = (int)((v - minVal) * scale);
+                                    break;
+                                case ConvertMode.log:
+                                    number = (int)(Math.Log(v - minVal + double.Epsilon) * invDenLog * 764.0);
+                                    break;
+                                case ConvertMode.ln:
+                                    number = (int)(Math.Log10(v - minVal + double.Epsilon) * invDenLog10 * 764.0);
+                                    break;
+                                default:
+                                    number = 0;
+                                    break;
+                            }
+                            if (number > 764) number = 764; else if (number < 0) number = 0;
+                            bitmap.SetPixel(x, y, color[number]);
                         }
                     }
                 }
@@ -236,12 +254,16 @@ namespace CodeD
         /// High-speed bitmap processing using parallel processing
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ProcessBitmapSIMD(SKBitmap bitmap, Func<int, int, int> colorFunc)
+        private void ProcessBitmapSIMD(SKBitmap bitmap, double min, double max, ConvertMode convertMode)
         {
             int width  = XSize;
             int height = YSize;
             EnsureColorIndicesBuffer(width, height); // new only when size changes
             var colorIndices = _colorIndices;
+            double range = (max - min);
+            double scale = range != 0.0 ? 764.0 / range : 0.0;
+            double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
+            double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
             
             Parallel.For(0, width, x =>
             {
@@ -249,10 +271,12 @@ namespace CodeD
                 int y          = 0;
                 
                 // SIMD processing: Process multiple elements simultaneously using Vector<double>
-                if (VectorSize > 1)
+                if (VectorSize > 1 && convertMode == ConvertMode.None)
                 {
-                    var minVec = new Vector<double>(764.0);
-                    var maxVec = Vector<double>.Zero;
+                    var maxIdxVec = new Vector<double>(764.0);
+                    var zeroVec = Vector<double>.Zero;
+                    var scaleVec = new Vector<double>(scale);
+                    var minVec = new Vector<double>(min);
                     
                     //for zero allocation in .net standard2.0
                     unsafe
@@ -264,21 +288,13 @@ namespace CodeD
 
                             for (; y <= height - vectorSize; y += vectorSize)
                             {
+                                var vec = Unsafe.Read<Vector<double>>(ptr + y);
+                                // Normalize: ((v - min) * scale)
+                                vec = (vec - minVec) * scaleVec;
+                                // Clamp to [0, 764]
+                                vec = Vector.Min(Vector.Max(vec, zeroVec), maxIdxVec);
                                 for (int v = 0; v < vectorSize; v++)
-                                {
-                                    values[v] = colorFunc(x, y + v);
-                                }
-
-                                var vec = Unsafe.Read<Vector<double>>(ptr);
-
-                                // Clamp: vec = min(max(vec, 0), 764)
-                                vec = Vector.Max(vec, maxVec);
-                                vec = Vector.Min(vec, minVec);
-
-                                for (int v = 0; v < vectorSize; v++)
-                                {
                                     colorIndices[baseIndex + y + v] = (int)vec[v];
-                                }
                             }
                         }
                     }
@@ -288,7 +304,23 @@ namespace CodeD
                 // Process remaining elements
                 for (; y < height; y++)
                 {
-                    int number = colorFunc(x, y);
+                    double v = Data[x, y];
+                    int number;
+                    switch (convertMode)
+                    {
+                        case ConvertMode.None:
+                            number = (int)((v - min) * scale);
+                            break;
+                        case ConvertMode.log:
+                            number = (int)(Math.Log(v - min + double.Epsilon) * invDenLog * 764.0);
+                            break;
+                        case ConvertMode.ln:
+                            number = (int)(Math.Log10(v - min + double.Epsilon) * invDenLog10 * 764.0);
+                            break;
+                        default:
+                            number = 0;
+                            break;
+                    }
                     if (number > 764) number = 764;
                     else if (number < 0) number = 0;
                     colorIndices[baseIndex + y] = number;

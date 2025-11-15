@@ -115,4 +115,29 @@ Notes:
 - The change targets the rendering SIMD loop; non-render methods (Plane/Rotate) are unaffected functionally. Minor variance is expected.
 - The largest gains appear on Large/XLarge sizes where loop overhead accumulates.
 
+## Optimization v4: ConvertMode-specific fast paths (2025-11-16, branch perf/heatmap-renderer)
+
+Environment: Windows 11, .NET 8.0.22, 13th Gen Intel Core i9-13900F
+
+Changes:
+- Removed per-pixel delegate calls in hot loops; inlined ConvertMode branches.
+- SIMD vectorization for `ConvertMode.None` with precomputed `scale` and `min` vectors.
+- Scalar specialized paths for `ConvertMode.log` (natural log) and `ConvertMode.ln` (log10), avoiding delegate overhead.
+
+Results (vs v3):
+
+| Case | Mean | Alloc | v3 | Δ Speed | Δ Memory |
+|---|---:|---:|---:|---:|---:|
+| ToBitmap Medium None | 39.217 us | 13.11 KB | 39.712 us / 13.02 KB | +1.2% | +0.7% |
+| ToBitmap Large None | 92.655 us | 9.31 KB | 114.303 us / 10.04 KB | **+18.9%** | **-7.3%** |
+| ToBitmap XLarge None | 1.417 ms | 14.47 KB | 1.638 ms / 17.14 KB | **+13.5%** | **-15.6%** |
+| ToBitmap Medium Log | 34.920 us | 9.30 KB | 41.767 us / 9.19 KB | **+16.4%** | +1.2% |
+| ToBitmap Medium Ln | 35.223 us | 9.39 KB | 43.479 us / 9.20 KB | **+19.0%** | +2.1% |
+| PlaneCorrection Medium | 13.018 us | 32.12 KB | 13.162 us / 32.12 KB | +1.1% | ±0% |
+| RotateCW Medium | 4.160 us | 32.12 KB | 4.391 us / 32.12 KB | +5.3% | ±0% |
+
+Notes:
+- Major gains on Large/XLarge from eliminating per-pixel delegate overhead and using SIMD for the `None` path.
+- `log/ln` paths benefit from devirtualized scalar math; additional vectorization would require Math intrinsics or approximations.
+
 
