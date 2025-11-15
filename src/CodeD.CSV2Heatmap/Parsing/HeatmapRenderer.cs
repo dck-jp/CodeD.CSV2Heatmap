@@ -17,6 +17,11 @@ namespace CodeD
     {
         private static SKColor[] color;
 
+        // Color map cache to avoid repeated allocation
+        private static SKColor[] _rainbowCache;
+        private static SKColor[] _monochromeCache;
+        private static SKColor[] _blackPurpleWhiteCache;
+
         public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
 
         public enum ConvertMode { None, ln, log };
@@ -137,19 +142,33 @@ namespace CodeD
 
         private void CreateColorMap(ColorMode colorMode)
         {
-            color = new SKColor[765];
             switch (colorMode)
             {
                 case ColorMode.Rainbow:
-                    SetRainbowColors(ref color);
+                    if (_rainbowCache == null)
+                    {
+                        _rainbowCache = new SKColor[765];
+                        SetRainbowColors(ref _rainbowCache);
+                    }
+                    color = _rainbowCache;
                     break;
 
                 case ColorMode.Monochorome:
-                    SetMonochromeColors(ref color);
+                    if (_monochromeCache == null)
+                    {
+                        _monochromeCache = new SKColor[765];
+                        SetMonochromeColors(ref _monochromeCache);
+                    }
+                    color = _monochromeCache;
                     break;
 
                 case ColorMode.BlackPurpleWhite:
-                    SetBlackPurpleWhiteColors(ref color);
+                    if (_blackPurpleWhiteCache == null)
+                    {
+                        _blackPurpleWhiteCache = new SKColor[765];
+                        SetBlackPurpleWhiteColors(ref _blackPurpleWhiteCache);
+                    }
+                    color = _blackPurpleWhiteCache;
                     break;
 
                 default:
