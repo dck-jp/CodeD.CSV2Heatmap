@@ -1,0 +1,7 @@
+# Benchmark artifacts
+**/BenchmarkDotNet.Artifacts/
+**/results/
+
+# Optional local data sets (if any)
+data/
+**/data/
