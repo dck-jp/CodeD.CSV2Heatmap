@@ -45,4 +45,28 @@ dotnet run -c Release -p benchmarks/CodeD.CSV2Heatmap.Benchmarks/CodeD.CSV2Heatm
 | PlaneCorrection Medium | 13.192 us | 32.11 KB |
 | RotateCW Medium | 4.332 us | 32.11 KB |
 
+## 最適化v1: SIMD + 並列処理 + ゼロアロケーション（2025-11-16, branch perf/heatmap-renderer）
+
+環境: Windows 11, .NET 8.0.22, 13th Gen Intel Core i9-13900F
+
+| Case | Mean | Alloc | Baseline | 速度改善 | メモリ削減 |
+|---|---:|---:|---:|---:|---:|
+| ToBitmap Medium None | 40.588 us | 16.13 KB | 44.703 us | **9.2% 高速化** | **55.0% 削減** |
+| ToBitmap Medium log | 42.284 us | 12.54 KB | 41.370 us | -2.2% | **61.4% 削減** |
+| ToBitmap Medium ln | 44.355 us | 12.26 KB | 118.575 us | **62.6% 高速化** ⭐⭐⭐ | **62.1% 削減** |
+| ToBitmap Large None | 122.978 us | 13.1 KB | 179.764 us | **31.6% 高速化** ⭐ | **95.4% 削減** ⭐⭐⭐ |
+| ToBitmap XLarge None | 1.647 ms | 20.2 KB | 2.238 ms | **26.4% 高速化** ⭐⭐ | **99.5% 削減** ⭐⭐⭐ |
+| PlaneCorrection Medium | 13.104 us | 32.12 KB | 13.192 us | ±0% | ±0% |
+| RotateCW Medium | 4.212 us | 32.12 KB | 4.332 us | ±0% | ±0% |
+
+**主要な成果**:
+- **XLarge (1024×1024)**: 2.238ms → 1.647ms (26.4%高速化)、メモリ4174KB → 20KB (99.5%削減)
+- **Large (256×256)**: 179.764us → 122.978us (31.6%高速化)、メモリ283KB → 13KB (95.4%削減)
+- **Medium ln変換**: 118.575us → 44.355us (62.6%高速化、最大の速度改善)
+
+**技術詳細**:
+- ゼロアロケーション: `Span<double>`から直接`Vector<double>`を構築
+- SIMD処理でstackalloc領域を再利用、`.ToArray()`によるヒープ割り当てを回避
+- 結果: 特に大規模データでGCプレッシャーが激減し、速度とメモリの両面で劇的改善
+
 

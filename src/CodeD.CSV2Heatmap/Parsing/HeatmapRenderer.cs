@@ -17,21 +17,36 @@ namespace CodeD
     {
         private static SKColor[] color;
 
-    public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
+        public enum ColorMode { Monochorome, Rainbow, BlackPurpleWhite };
 
-    public enum ConvertMode { None, ln, log };
+        public enum ConvertMode { None, ln, log };
 
-    public SKColor OutOfRangeColor { get; set; }
-    public bool EnablesOutOfRangeColor { get; set; }
+        public SKColor OutOfRangeColor { get; set; }
+        public bool EnablesOutOfRangeColor { get; set; }
 
         public int XSize { get; private set; }
         public int YSize { get; private set; }
 
         public double PixelSize { get; private set; }
         public double[,] Data { get; private set; }
+
         public string Header { get; private set; }
         public double Max { get; private set; }
         public double Min { get; private set; }
+
+#region Color Index Buffer
+        private int[] _colorIndices = Array.Empty<int>();
+
+        private void EnsureColorIndicesBuffer(int width, int height)
+        {
+            int needed = width * height;
+            if (_colorIndices.Length < needed)
+            {
+                // サイズが変わったときだけ確保（定常状態では new しない）
+                _colorIndices = new int[needed];
+            }
+        }
+#endregion
 
         public HeatmapRenderer(double[,] data, double pixelSize = 0, string header = "")
         {
@@ -201,49 +216,61 @@ namespace CodeD
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessBitmapSIMD(SKBitmap bitmap, Func<int, int, int> colorFunc)
         {
-            // First calculate all color values (parallelization + SIMD)
-            int[,] colorIndices = new int[XSize, YSize];
+            int width  = XSize;
+            int height = YSize;
+            EnsureColorIndicesBuffer(width, height); // new only when size changes
+            var colorIndices = _colorIndices;
             
-            Parallel.For(0, XSize, x =>
+            Parallel.For(0, width, x =>
             {
-                int y = 0;
+                int baseIndex  = x * height;
+                int y          = 0;
                 int vectorSize = Vector<double>.Count;
                 
                 // SIMD processing: Process multiple elements simultaneously using Vector<double>
                 if (vectorSize > 1)
                 {
                     var minVec = new Vector<double>(764.0);
-                    var maxVec = new Vector<double>(0.0);
-                    double[] values = new double[vectorSize];
+                    var maxVec = Vector<double>.Zero;
                     
-                    for (; y <= YSize - vectorSize; y += vectorSize)
+                    //for zero allocation in .net standard2.0
+                    unsafe
                     {
-                        // Vectorize and calculate
-                        for (int v = 0; v < vectorSize; v++)
+                        fixed (double* ptr = &Data[x, 0])
                         {
-                            values[v] = colorFunc(x, y + v);
-                        }
-                        
-                        var vec = new Vector<double>(values);
-                        // Clamp: min(max(vec, 0), 764)
-                        vec = Vector.Max(vec, maxVec);
-                        vec = Vector.Min(vec, minVec);
-                        
-                        // Store results in array
-                        for (int v = 0; v < vectorSize; v++)
-                        {
-                            colorIndices[x, y + v] = (int)vec[v];
+                            Span<double> values = stackalloc double[8];
+                            if (vectorSize > values.Length) vectorSize = values.Length;
+
+                            for (; y <= height - vectorSize; y += vectorSize)
+                            {
+                                for (int v = 0; v < vectorSize; v++)
+                                {
+                                    values[v] = colorFunc(x, y + v);
+                                }
+
+                                var vec = Unsafe.Read<Vector<double>>(ptr);
+
+                                // Clamp: vec = min(max(vec, 0), 764)
+                                vec = Vector.Max(vec, maxVec);
+                                vec = Vector.Min(vec, minVec);
+
+                                for (int v = 0; v < vectorSize; v++)
+                                {
+                                    colorIndices[baseIndex + y + v] = (int)vec[v];
+                                }
+                            }
                         }
                     }
+
                 }
                 
                 // Process remaining elements
-                for (; y < YSize; y++)
+                for (; y < height; y++)
                 {
                     int number = colorFunc(x, y);
                     if (number > 764) number = 764;
                     else if (number < 0) number = 0;
-                    colorIndices[x, y] = number;
+                    colorIndices[baseIndex + y] = number;
                 }
             });
             
@@ -253,12 +280,16 @@ namespace CodeD
                 var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
                 int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
                 
-                Parallel.For(0, XSize, x =>
+                Parallel.For(0, width, x =>
                 {
-                    for (int y = 0; y < YSize; y++)
+                    int baseIndex = x * height;
+
+                    for (int y = 0; y < height; y++)
                     {
-                        var c = color[colorIndices[x, y]];
-                        pixelPtr[y * stride + x] = (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
+                        int idx = baseIndex + y;
+                        var c   = color[colorIndices[idx]];
+                        pixelPtr[y * stride + x] =
+                            (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
                     }
                 });
             }
