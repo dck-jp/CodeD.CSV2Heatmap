@@ -298,7 +298,6 @@ namespace CodeD
                             }
                         }
                     }
-
                 }
                 
                 // Process remaining elements
