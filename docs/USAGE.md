@@ -113,3 +113,57 @@ double value = heatmap.Data[x, y];
 // Save to file
 heatmap.SaveAs("output.txt");
 ```
+
+## Zero-copy / Row-major Buffer (Advanced)
+
+When parsing large grid CSV files, copying the entire data into a `double[,]` can be expensive in both time and memory.
+This library provides two advanced APIs to work with a row-major contiguous buffer of doubles which is faster and has lower memory overhead for many tasks.
+
+1) `GetRowMajorBuffer(bool createIfMissing = false)`
+
+- Returns `ReadOnlyMemory<double>` representing the contiguous row-major buffer that the parser uses internally.
+- If the parser did not keep a buffer but `createIfMissing` is true, the method will allocate a pooled row-major buffer and copy `Data` into it.
+- This method does not transfer ownership. The returned memory is valid only as long as the parser instance is alive and has not been disposed or had the buffer extracted.
+
+Example (read-only):
+```csharp
+using (var p = await GridCsvParser.CreateAsync("samples/grid_sample_star.csv"))
+{
+    var mem = p.GetRowMajorBuffer(createIfMissing: true);
+    if (!mem.IsEmpty)
+    {
+        var arr = mem.ToArray(); // copy if you need a long-lived buffer
+        // Process arr as a row-major array; arr[row * width + col]
+    }
+}
+```
+
+2) `ExtractRowMajorBuffer(bool createIfMissing = false)`
+
+- Transfers ownership of the internal row-major array to the caller and returns the `double[]` buffer. The caller must return the array to `ArrayPool<double>.Shared` once done.
+- After extracting the buffer, the parser will no longer provide a `Data` 2D array; accessing `Data` will throw an `InvalidOperationException`.
+
+Example (zero-copy, transfer ownership):
+```csharp
+var parser = await GridCsvParser.CreateAsync("samples/grid_sample_star.csv");
+// Take ownership of the internal buffer (no copy)
+var buf = parser.ExtractRowMajorBuffer(createIfMissing: true);
+
+try
+{
+    // buf is row-major: index by row * width + col
+    var v = buf[0];
+}
+finally
+{
+    // Return to ArrayPool when finished
+    ArrayPool<double>.Shared.Return(buf);
+    // Dispose parser if not needed anymore
+    parser.Dispose();
+}
+```
+
+Notes
+- If you prefer to keep using `Data[,]` while also getting a copy of the row-major buffer, call `GetRowMajorBuffer(createIfMissing: true)` and then call `mem.ToArray()` to create your own copy.
+- The parser implements `IDisposable`, and `Dispose()` will release any pooled resources retained by the parser. If you call `ExtractRowMajorBuffer()` and then call `Dispose()`, `Dispose()` will not free the transferred buffer; it is the caller's responsibility to return it to the pool.
+
