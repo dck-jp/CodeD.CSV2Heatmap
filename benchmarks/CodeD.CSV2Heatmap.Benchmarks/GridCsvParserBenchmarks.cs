@@ -15,7 +15,7 @@ namespace CodeD.CSV2Heatmap.Benchmarks
         public void Setup()
         {
             // samples folder is located relative to repository root; use directory traversal from bin
-            sampleFilePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "samples", "grid_sample_temperature.csv"));
+            sampleFilePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "grid_sample_temperature.csv"));
         }
 
         [Benchmark]
