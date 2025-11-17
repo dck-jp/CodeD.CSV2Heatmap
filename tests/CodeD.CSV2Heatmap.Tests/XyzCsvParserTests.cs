@@ -25,7 +25,7 @@ namespace CodeD.Tests
             Assert.IsNotNull(array, "Array should be generated");
             Assert.IsTrue(header.Contains("header1"), "Header information should be included");
             Assert.IsTrue(header.Contains("header2"), "Header information should be included");
-            
+
             // Array size check (3x2 grid data)
             Assert.AreEqual(3, array.GetLength(0), "X dimension size should be correct");
             Assert.AreEqual(2, array.GetLength(1), "Y dimension size should be correct");
@@ -47,7 +47,7 @@ namespace CodeD.Tests
             Assert.IsNotNull(xyz, "XYZData object should be created");
             Assert.IsNotNull(array, "Array should be generated");
             Assert.IsTrue(header.Contains("テストデータ"), "Header information should be included");
-            
+
             // Array size check (3x2 grid data)
             Assert.AreEqual(3, array.GetLength(0), "X dimension size should be correct");
             Assert.AreEqual(2, array.GetLength(1), "Y dimension size should be correct");
@@ -69,11 +69,11 @@ namespace CodeD.Tests
             Assert.IsNotNull(xyz, "XYZData object should be created");
             Assert.IsNotNull(array, "Array should be generated");
             Assert.IsTrue(header.Contains("データ開始"), "Header information should be included");
-            
+
             // Array size check (3x3 grid data)
             Assert.AreEqual(3, array.GetLength(0), "X dimension size should be correct");
             Assert.AreEqual(3, array.GetLength(1), "Y dimension size should be correct");
-            
+
             // Test specific values
             Assert.AreNotEqual(double.NaN, array[0, 0], "First data point should be valid value");
         }
@@ -128,7 +128,7 @@ namespace CodeD.Tests
             Assert.IsNotNull(array, "Array should be generated");
             Assert.IsTrue(header.Contains("header1"), "Header information should be included");
             Assert.IsTrue(header.Contains("header2"), "Header information should be included");
-            
+
             // Array size check (3x2 grid data)
             Assert.AreEqual(3, array.GetLength(0), "X dimension size should be correct");
             Assert.AreEqual(2, array.GetLength(1), "Y dimension size should be correct");

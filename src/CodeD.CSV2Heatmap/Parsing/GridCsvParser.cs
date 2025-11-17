@@ -288,154 +288,154 @@ namespace CodeD
             try
             {
                 SetHeader(headerLines);
-            for (int w = 0; w < workerCount; w++)
-            {
-                workerLocals[w] = (double.PositiveInfinity, double.NegativeInfinity);
-                int wi = w;
-                // workers will be started inside the pinned block to allow pointer-based writes
-            }
-
-            // Second pass: read the file again and enqueue body lines while workers parse via pointer
-            unsafe
-            {
-                fixed (double* basePtr = buffer)
+                for (int w = 0; w < workerCount; w++)
                 {
-                    var baseAddress = (IntPtr)basePtr;
-                    // create worker tasks that call pointer-based parse routine (writing directly into the rented double[] buffer)
-                    for (int w = 0; w < workerCount; w++)
-                    {
-                        int wi = w;
-                        workers[w] = Task.Run(() =>
-                        {
-                            foreach (var chunk in queue.GetConsumingEnumerable())
-                            {
-                                try
-                                {
-                                    foreach (var seg in chunk.Rows)
-                                    {
-                                    unsafe
-                                    {
-                                        double* ptr = (double*)baseAddress.ToPointer();
-                                        ReadOnlySpan<char> rowSpan = new ReadOnlySpan<char>(chunk.Buffer, seg.Offset, seg.Length);
-                                        ParseTokensToRowToBuffer(rowSpan, spliter, seg.RowIndex, ptr, XSize, ref workerLocals[wi].min, ref workerLocals[wi].max);
-                                    }
-                                    }
-                                }
-                                finally
-                                {
-                                    // Return the chunk buffer to the pool
-                                    if (chunk.Buffer != null)
-                                    {
-                                        ArrayPool<char>.Shared.Return(chunk.Buffer);
-                                        chunk.Buffer = null; // prevent double return
-                                    }
-                                }
-                            }
-                        });
-                    }
+                    workerLocals[w] = (double.PositiveInfinity, double.NegativeInfinity);
+                    int wi = w;
+                    // workers will be started inside the pinned block to allow pointer-based writes
+                }
 
-                    using (var sr = new StreamReader(filename, encoding))
+                // Second pass: read the file again and enqueue body lines while workers parse via pointer
+                unsafe
+                {
+                    fixed (double* basePtr = buffer)
                     {
-                        string line;
-                        // skip header lines (synchronous to avoid await inside unsafe block)
-                        int skipped = 0;
-                        while (skipped < headerLines.Count && (line = sr.ReadLine()) != null)
+                        var baseAddress = (IntPtr)basePtr;
+                        // create worker tasks that call pointer-based parse routine (writing directly into the rented double[] buffer)
+                        for (int w = 0; w < workerCount; w++)
                         {
-                            skipped++;
-                        }
-                        // Now use pooled char[] chunk-based reader to avoid allocations for each line
-                        int rowIndex = 0;
-                        const int CharChunkSize = 16 * 1024; // 16KB char chunks
-                        var tailBuffer = ArrayPool<char>.Shared.Rent(1024);
-                        int tailLen = 0;
-                        try
-                        {
-                            while (!sr.EndOfStream)
+                            int wi = w;
+                            workers[w] = Task.Run(() =>
                             {
-                                // Rent a char buffer and prepare the start offset if we have partial from last read
-                                var buf = ArrayPool<char>.Shared.Rent(CharChunkSize);
-                                int writePos = 0;
+                                foreach (var chunk in queue.GetConsumingEnumerable())
+                                {
+                                    try
+                                    {
+                                        foreach (var seg in chunk.Rows)
+                                        {
+                                            unsafe
+                                            {
+                                                double* ptr = (double*)baseAddress.ToPointer();
+                                                ReadOnlySpan<char> rowSpan = new ReadOnlySpan<char>(chunk.Buffer, seg.Offset, seg.Length);
+                                                ParseTokensToRowToBuffer(rowSpan, spliter, seg.RowIndex, ptr, XSize, ref workerLocals[wi].min, ref workerLocals[wi].max);
+                                            }
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        // Return the chunk buffer to the pool
+                                        if (chunk.Buffer != null)
+                                        {
+                                            ArrayPool<char>.Shared.Return(chunk.Buffer);
+                                            chunk.Buffer = null; // prevent double return
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        using (var sr = new StreamReader(filename, encoding))
+                        {
+                            string line;
+                            // skip header lines (synchronous to avoid await inside unsafe block)
+                            int skipped = 0;
+                            while (skipped < headerLines.Count && (line = sr.ReadLine()) != null)
+                            {
+                                skipped++;
+                            }
+                            // Now use pooled char[] chunk-based reader to avoid allocations for each line
+                            int rowIndex = 0;
+                            const int CharChunkSize = 16 * 1024; // 16KB char chunks
+                            var tailBuffer = ArrayPool<char>.Shared.Rent(1024);
+                            int tailLen = 0;
+                            try
+                            {
+                                while (!sr.EndOfStream)
+                                {
+                                    // Rent a char buffer and prepare the start offset if we have partial from last read
+                                    var buf = ArrayPool<char>.Shared.Rent(CharChunkSize);
+                                    int writePos = 0;
+                                    if (tailLen > 0)
+                                    {
+                                        // move partial tail into beginning of buf
+                                        Buffer.BlockCopy(tailBuffer, 0, buf, 0, tailLen * sizeof(char));
+                                        writePos = tailLen;
+                                        tailLen = 0;
+                                    }
+                                    int read = sr.Read(buf, writePos, buf.Length - writePos);
+                                    if (read == 0)
+                                    {
+                                        // no more chars
+                                        ArrayPool<char>.Shared.Return(buf);
+                                        break;
+                                    }
+                                    int used = writePos + read;
+                                    // Scan buffer for line breaks and create a chunk for each set of rows up to a batch limit
+                                    var chunk = new PooledChunk(buf, used);
+                                    int start = 0;
+                                    for (int i = 0; i < used; i++)
+                                    {
+                                        if (buf[i] == '\n')
+                                        {
+                                            int lineEnd = i;
+                                            // handle CRLF and CR only
+                                            if (lineEnd > start && buf[lineEnd - 1] == '\r') lineEnd--;
+                                            int len = lineEnd - start;
+                                            chunk.Rows.Add(new RowSegment { RowIndex = rowIndex, Offset = start, Length = len });
+                                            rowIndex++;
+                                            start = i + 1;
+                                            // nothing special here: send entire buffer as one chunk to queue
+                                        }
+                                    }
+                                    // if we have trailing partial line, copy to tailBuffer
+                                    if (start < used)
+                                    {
+                                        int partialLen = used - start;
+                                        if (tailBuffer.Length < partialLen) { ArrayPool<char>.Shared.Return(tailBuffer); tailBuffer = ArrayPool<char>.Shared.Rent(partialLen); }
+                                        Buffer.BlockCopy(buf, start * sizeof(char), tailBuffer, 0, partialLen * sizeof(char));
+                                        tailLen = partialLen;
+                                    }
+                                    // If the chunk had any rows and its buffer differs from the current buf, return empty chunk; else add if has rows
+                                    if (chunk.Rows.Count > 0)
+                                    {
+                                        chunk.UsedLength = used; // set used length for reference (not strictly necessary for parsing segments)
+                                        queue.Add(chunk);
+                                    }
+                                    else
+                                    {
+                                        // nothing to parse; return buffer now
+                                        ArrayPool<char>.Shared.Return(buf);
+                                    }
+                                }
+                                // if we have partial tail remaining at EOF, enqueue it as a final row
                                 if (tailLen > 0)
                                 {
-                                    // move partial tail into beginning of buf
-                                    Buffer.BlockCopy(tailBuffer, 0, buf, 0, tailLen * sizeof(char));
-                                    writePos = tailLen;
+                                    var finalBuf = ArrayPool<char>.Shared.Rent(tailLen);
+                                    Buffer.BlockCopy(tailBuffer, 0, finalBuf, 0, tailLen * sizeof(char));
+                                    var finalChunk = new PooledChunk(finalBuf, tailLen);
+                                    finalChunk.Rows.Add(new RowSegment { RowIndex = rowIndex, Offset = 0, Length = tailLen });
+                                    queue.Add(finalChunk);
+                                    rowIndex++;
                                     tailLen = 0;
                                 }
-                                int read = sr.Read(buf, writePos, buf.Length - writePos);
-                                if (read == 0)
-                                {
-                                    // no more chars
-                                    ArrayPool<char>.Shared.Return(buf);
-                                    break;
-                                }
-                                int used = writePos + read;
-                                // Scan buffer for line breaks and create a chunk for each set of rows up to a batch limit
-                                var chunk = new PooledChunk(buf, used);
-                                int start = 0;
-                                for (int i = 0; i < used; i++)
-                                {
-                                    if (buf[i] == '\n')
-                                    {
-                                        int lineEnd = i;
-                                        // handle CRLF and CR only
-                                        if (lineEnd > start && buf[lineEnd - 1] == '\r') lineEnd--;
-                                        int len = lineEnd - start;
-                                        chunk.Rows.Add(new RowSegment { RowIndex = rowIndex, Offset = start, Length = len });
-                                        rowIndex++;
-                                        start = i + 1;
-                                        // nothing special here: send entire buffer as one chunk to queue
-                                    }
-                                }
-                                // if we have trailing partial line, copy to tailBuffer
-                                if (start < used)
-                                {
-                                    int partialLen = used - start;
-                                    if (tailBuffer.Length < partialLen) { ArrayPool<char>.Shared.Return(tailBuffer); tailBuffer = ArrayPool<char>.Shared.Rent(partialLen); }
-                                    Buffer.BlockCopy(buf, start * sizeof(char), tailBuffer, 0, partialLen * sizeof(char));
-                                    tailLen = partialLen;
-                                }
-                                // If the chunk had any rows and its buffer differs from the current buf, return empty chunk; else add if has rows
-                                if (chunk.Rows.Count > 0)
-                                {
-                                    chunk.UsedLength = used; // set used length for reference (not strictly necessary for parsing segments)
-                                    queue.Add(chunk);
-                                }
-                                else
-                                {
-                                    // nothing to parse; return buffer now
-                                    ArrayPool<char>.Shared.Return(buf);
-                                }
                             }
-                            // if we have partial tail remaining at EOF, enqueue it as a final row
-                            if (tailLen > 0)
+                            finally
                             {
-                                var finalBuf = ArrayPool<char>.Shared.Rent(tailLen);
-                                Buffer.BlockCopy(tailBuffer, 0, finalBuf, 0, tailLen * sizeof(char));
-                                var finalChunk = new PooledChunk(finalBuf, tailLen);
-                                finalChunk.Rows.Add(new RowSegment { RowIndex = rowIndex, Offset = 0, Length = tailLen });
-                                queue.Add(finalChunk);
-                                rowIndex++;
-                                tailLen = 0;
+                                if (tailBuffer != null) ArrayPool<char>.Shared.Return(tailBuffer);
                             }
                         }
-                        finally
-                        {
-                            if (tailBuffer != null) ArrayPool<char>.Shared.Return(tailBuffer);
-                        }
+
+                        // complete and wait for workers to finish (synchronous wait to avoid await in unsafe context)
+                        queue.CompleteAdding();
+                        Task.WaitAll(workers);
+
+                        // After parsing into the buffer, retain the row-major buffer for lazy Data creation
+                        _rowMajorBuffer = rentedBuffer;
+                        _rowMajorBufferIsFromPool = true;
+                        keepRentedBuffer = true;
+                        // done with pinned buffer
                     }
-
-                    // complete and wait for workers to finish (synchronous wait to avoid await in unsafe context)
-                    queue.CompleteAdding();
-                    Task.WaitAll(workers);
-
-                    // After parsing into the buffer, retain the row-major buffer for lazy Data creation
-                    _rowMajorBuffer = rentedBuffer;
-                    _rowMajorBufferIsFromPool = true;
-                    keepRentedBuffer = true;
-                    // done with pinned buffer
                 }
-            }
             }
             finally
             {
@@ -468,7 +468,7 @@ namespace CodeD
         {
             var detectionResult = CharsetDetector.DetectFromFile(filename);
             var encoding = detectionResult.Detected?.Encoding ?? Encoding.UTF8;
-            
+
             var rawDataLines = File.ReadAllLines(filename, encoding);
             if (rawDataLines.Length > 0 && rawDataLines[rawDataLines.Length - 1] == "")
             {

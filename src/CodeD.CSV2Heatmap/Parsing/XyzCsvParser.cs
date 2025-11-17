@@ -263,7 +263,8 @@ namespace CodeD
             _LoadingSuccess = true;
 
             // Convert to 2D array (row-major buffer) and set properties
-            await Task.Run(() => {
+            await Task.Run(() =>
+            {
                 var buflen = _X.Count;
             }).ConfigureAwait(false);
             // We will create the buffer via ToArray method
@@ -288,11 +289,11 @@ namespace CodeD
                 Min = double.IsPositiveInfinity(min) ? double.NaN : min;
                 Max = double.IsNegativeInfinity(max) ? double.NaN : max;
             }
-                // set header and mark parsing completed
-                SetHeader(headerLines);
-                // parsing completed
-                if (!_LoadingSuccess) _LoadingSuccess = true;
-            
+            // set header and mark parsing completed
+            SetHeader(headerLines);
+            // parsing completed
+            if (!_LoadingSuccess) _LoadingSuccess = true;
+
             // Convert to 2D array and set properties
             Data = ToArray();
             if (Data != null)
@@ -323,7 +324,7 @@ namespace CodeD
                 tempY[i] = ConvertToDouble(data[1]);
                 tempZ[i] = ConvertToDouble(data[zColNum - 1]);
             });
-            
+
             _X.AddRange(tempX);
             _Y.AddRange(tempY);
             _Z.AddRange(tempZ);
@@ -411,9 +412,9 @@ namespace CodeD
 
         private static bool TryParseToken(ReadOnlySpan<char> tokenSpan, out double parsed)
         {
-            #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
             return double.TryParse(tokenSpan, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed);
-            #else
+#else
             if (TryParseSpanDelegate != null)
             {
                 return TryParseSpanDelegate(tokenSpan, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out parsed);
@@ -423,7 +424,7 @@ namespace CodeD
                 var s = tokenSpan.ToString();
                 return double.TryParse(s, out parsed);
             }
-            #endif
+#endif
         }
 
         private double ConvertToDouble(string s)
@@ -437,7 +438,7 @@ namespace CodeD
             else if (line1.Contains(",")) { return new[] { ',' }; }
             else { return new[] { ' ' }; }
         }
-	
+
         /// <summary>
         /// Skip lines at the beginning of the file that contain non-numeric data
         /// until a line with only numeric values appears,
@@ -478,7 +479,7 @@ namespace CodeD
         private bool ContainsString(string[] tempLine)
         {
             if (tempLine.Length == 0) return true;
-            
+
             for (int i = 0; i != tempLine.Length; i++)
             {
                 if (!double.TryParse(tempLine[i], out _))
@@ -497,7 +498,7 @@ namespace CodeD
 
             Header = sb.ToString();
         }
-        	
+
         private double[,] ToArray()
         {
             if (!_LoadingSuccess) return null;

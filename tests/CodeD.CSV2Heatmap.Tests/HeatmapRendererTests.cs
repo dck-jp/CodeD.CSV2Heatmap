@@ -69,12 +69,12 @@ namespace CodeD.Tests
             // 結果の検証: ピクセル値が正しく設定されているか
             bitmap.Width.Is(10);
             bitmap.Height.Is(10);
-            
+
             // いくつかのピクセルをサンプリングして確認
             var color00 = bitmap.GetPixel(0, 0);
             var color55 = bitmap.GetPixel(5, 5);
             var color99 = bitmap.GetPixel(9, 9);
-            
+
             // カラー値が設定されていることを確認（透明でないこと）
             color00.Alpha.Is((byte)255);
             color55.Alpha.Is((byte)255);
@@ -102,12 +102,12 @@ namespace CodeD.Tests
             // 結果の検証
             bitmap.Width.Is(32);
             bitmap.Height.Is(32);
-            
+
             // グラデーションが正しく適用されているか確認
             var color00 = bitmap.GetPixel(0, 0);
             var color1616 = bitmap.GetPixel(16, 16);
             var color3131 = bitmap.GetPixel(31, 31);
-            
+
             // すべてのピクセルがアルファ値255で不透明であることを確認
             color00.Alpha.Is((byte)255);
             color1616.Alpha.Is((byte)255);
@@ -123,7 +123,7 @@ namespace CodeD.Tests
             // テスト用のデータを作成
             var testData = new double[50, 50];
             var random = new Random(12345); // シード固定で再現性を確保
-            
+
             for (int i = 0; i < 50; i++)
             {
                 for (int j = 0; j < 50; j++)
@@ -153,7 +153,7 @@ namespace CodeD.Tests
         {
             // 境界値のテスト
             var edgeData = new double[20, 20];
-            
+
             // 最小値と最大値を配置
             for (int i = 0; i < 20; i++)
             {
@@ -175,10 +175,10 @@ namespace CodeD.Tests
             var colorMin = bitmap.GetPixel(0, 0);
             var colorMid = bitmap.GetPixel(10, 10);
             var colorMax = bitmap.GetPixel(19, 19);
-            
+
             // 最小値と最大値のピクセルが異なる色であることを確認
-            var minMaxDiff = Math.Abs(colorMin.Red - colorMax.Red) + 
-                            Math.Abs(colorMin.Green - colorMax.Green) + 
+            var minMaxDiff = Math.Abs(colorMin.Red - colorMax.Red) +
+                            Math.Abs(colorMin.Green - colorMax.Green) +
                             Math.Abs(colorMin.Blue - colorMax.Blue);
             Assert.IsTrue(minMaxDiff > 0, "最小値と最大値で色が異なるはず");
 
