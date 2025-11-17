@@ -2,6 +2,7 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 using System;
 using System.IO;
+using CodeD.CSV2Heatmap.Benchmarks;
 
 internal class Program
 {
@@ -12,5 +13,6 @@ internal class Program
 
         var config = DefaultConfig.Instance.WithArtifactsPath(artifactsPath);
         BenchmarkRunner.Run<HeatmapRendererBenchmarks>(config);
+        BenchmarkRunner.Run<GridCsvParserBenchmarks>(config);
     }
 }

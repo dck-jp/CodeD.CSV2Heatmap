@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 using UtfUnknown;
@@ -36,15 +37,70 @@ namespace CodeD
         /// <param name="filename">Path to the CSV file to parse</param>
         private async Task ParseZMapFileAsync(string filename)
         {
-            string[] rawDataLines = CreateRawData(filename);
-            rawDataLines = SplitHeader(rawDataLines);
+            var detectionResult = CharsetDetector.DetectFromFile(filename);
+            var encoding = detectionResult.Detected?.Encoding ?? Encoding.UTF8;
+            var content = File.ReadAllText(filename, encoding);
+            ReadOnlySpan<char> contentSpan = content.AsSpan();
+            // build line start indices, avoiding allocation of string[] per line
+            var lineStarts = new List<int>();
+            lineStarts.Add(0);
+            for (int p = 0; p < contentSpan.Length; p++)
+            {
+                if (contentSpan[p] == '\r')
+                {
+                    if (p + 1 < contentSpan.Length && contentSpan[p + 1] == '\n') p++;
+                    if (p + 1 < contentSpan.Length) lineStarts.Add(p + 1);
+                }
+                else if (contentSpan[p] == '\n')
+                {
+                    if (p + 1 < contentSpan.Length) lineStarts.Add(p + 1);
+                }
+            }
+            if (lineStarts.Count == 0) return;
 
-            if (rawDataLines.Length == 0) return;
+            // local helper removed because ReadOnlySpan is a ref struct and cannot be captured by lambdas
 
-            var spliter = GetSplitChar(rawDataLines[0]);
-            XSize = rawDataLines[0].Trim().Split(spliter, StringSplitOptions.RemoveEmptyEntries).Length;
-            YSize = rawDataLines.Length;
+            // find beginning of numeric data
+            int firstBodyLine = -1;
+            for (int i = 0; i < lineStarts.Count; i++)
+            {
+                int startl = lineStarts[i];
+                int endl = (i + 1 < lineStarts.Count) ? lineStarts[i + 1] - 1 : contentSpan.Length;
+                while (endl > startl && (contentSpan[endl - 1] == '\r' || contentSpan[endl - 1] == '\n')) endl--;
+                var l = contentSpan.Slice(startl, endl - startl).Trim();
+                if (!l.IsEmpty && !ContainsNonNumeric(l))
+                {
+                    firstBodyLine = i;
+                    break;
+                }
+            }
+            if (firstBodyLine == -1)
+            {
+                // no data; set header to entire file
+                SetHeader(new List<string> { content });
+                return;
+            }
+            // collect header lines
+            if (firstBodyLine > 0)
+            {
+                var headerList = new List<string>(firstBodyLine);
+                for (int idx = 0; idx < firstBodyLine; idx++)
+                {
+                    int start = lineStarts[idx];
+                    int end = (idx + 1 < lineStarts.Count) ? lineStarts[idx + 1] - 1 : content.Length;
+                    while (end > start && (content.AsSpan()[end - 1] == '\r' || content.AsSpan()[end - 1] == '\n')) end--;
+                    headerList.Add(content.Substring(start, end - start));
+                }
+                SetHeader(headerList);
+            }
 
+            int start1 = lineStarts[firstBodyLine];
+            int end1 = (firstBodyLine + 1 < lineStarts.Count) ? lineStarts[firstBodyLine + 1] - 1 : contentSpan.Length;
+            while (end1 > start1 && (contentSpan[end1 - 1] == '\r' || contentSpan[end1 - 1] == '\n')) end1--;
+            var firstLineSpan = contentSpan.Slice(start1, end1 - start1).Trim();
+            var spliter = GetSplitChar(firstLineSpan);
+            XSize = CountTokens(firstLineSpan, spliter);
+            YSize = lineStarts.Count - firstBodyLine;
             Data = new double[XSize, YSize];
             var threadNum = Environment.ProcessorCount;
             var range = new int[1 + threadNum];
@@ -52,20 +108,56 @@ namespace CodeD
             range[range.Length - 1] = YSize;
             for (var i = 1; i < threadNum; i++) { range[i] = YSize * i / threadNum; }
 
-            Action<int, int> parser = (startLineNo, endLineNo) =>
+            var maxPerTask = new double[threadNum];
+            var minPerTask = new double[threadNum];
+            for (int ti = 0; ti < threadNum; ti++) { maxPerTask[ti] = double.MinValue; minPerTask[ti] = double.MaxValue; }
+
+            Action<int, int, int> parser = (startLineNo, endLineNo, threadIndex) =>
             {
+                var contentSpanLocal = content.AsSpan();
                 double parsed;
+                double localMax = double.MinValue;
+                double localMin = double.MaxValue;
                 for (int j = startLineNo; j < endLineNo; j++)
                 {
-                    string[] line = rawDataLines[j].Trim().Split(spliter, StringSplitOptions.RemoveEmptyEntries);
-
-                    for (int i = 0; i < XSize; i++)
+                    int idxLine = j + firstBodyLine;
+                    int sstart = lineStarts[idxLine];
+                    int send = (idxLine + 1 < lineStarts.Count) ? lineStarts[idxLine + 1] - 1 : contentSpanLocal.Length;
+                    while (send > sstart && (contentSpanLocal[send - 1] == '\r' || contentSpanLocal[send - 1] == '\n')) send--;
+                    var span = contentSpanLocal.Slice(sstart, send - sstart).Trim();
+                    int i = 0;
+                    int idx = 0;
+                    while (i < XSize && idx < span.Length)
                     {
-                        if (!(i < line.Length)) Data[i, j] = double.NaN; // When data points are insufficient
-                        else if (Double.TryParse(line[i], out parsed) && parsed != double.NaN) Data[i, j] = parsed;
+                        // Find next token boundary and trim
+                        int start = idx;
+                        while (idx < span.Length && span[idx] != spliter) idx++;
+                        var token = span.Slice(start, idx - start).Trim();
+                        if (token.Length == 0)
+                        {
+                            /* skip empty tokens (multiple delimiters) */
+                            idx++; // skip delimiter
+                            continue;
+                        }
+
+                        if (TryParseDouble(token, out parsed) && !double.IsNaN(parsed))
+                        {
+                            Data[i, j] = parsed;
+                            if (parsed > localMax) localMax = parsed;
+                            if (parsed < localMin) localMin = parsed;
+                        }
                         else Data[i, j] = double.NaN; // When parsing is not possible
+                        i++;
+
+                        // move past delimiter
+                        if (idx < span.Length && span[idx] == spliter) idx++;
                     }
+
+                    // fill remaining with NaN when insufficient data
+                    for (; i < XSize; i++) Data[i, j] = double.NaN;
                 }
+                maxPerTask[threadIndex] = localMax;
+                minPerTask[threadIndex] = localMin;
             };
 
             // Improve performance with asynchronous parallel processing
@@ -74,12 +166,14 @@ namespace CodeD
             {
                 var startRange = range[i];
                 var endRange = range[i + 1];
-                tasks[i] = Task.Run(() => parser(startRange, endRange));
+                var ti = i; // capture
+                tasks[i] = Task.Run(() => parser(startRange, endRange, ti));
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            Max = Data.Cast<double>().Max();
-            Min = Data.Cast<double>().Min();
+            // Combine per-task min/max
+            Max = maxPerTask.Max();
+            Min = minPerTask.Min();
         }
 
         /// <summary>
@@ -91,7 +185,6 @@ namespace CodeD
         {
             var detectionResult = CharsetDetector.DetectFromFile(filename);
             var encoding = detectionResult.Detected?.Encoding ?? Encoding.UTF8;
-            
             var rawDataLines = File.ReadAllLines(filename, encoding);
             if (rawDataLines.Length > 0 && rawDataLines[rawDataLines.Length - 1] == "")
             {
@@ -100,11 +193,39 @@ namespace CodeD
             return rawDataLines;
         }
 
-        private char[] GetSplitChar(string line1)
+        private char GetSplitChar(string line1)
         {
-            if (line1.Contains("\t")) { return new[] { '\t' }; }
-            else if (line1.Contains(",")) { return new[] { ',' }; }
-            else { return new[] { ' ' }; }
+            if (line1.Contains("\t")) { return '\t'; }
+            else if (line1.Contains(",")) { return ','; }
+            else { return ' '; }
+        }
+
+        private char GetSplitChar(ReadOnlySpan<char> line1)
+        {
+            if (line1.IndexOf('\t') >= 0) return '\t';
+            if (line1.IndexOf(',') >= 0) return ',';
+            return ' ';
+        }
+
+        private bool ContainsNonNumeric(ReadOnlySpan<char> span)
+        {
+            var splitter = GetSplitChar(span);
+            if (span.Trim().IsEmpty) return true;
+            int idx = 0;
+            while (idx < span.Length)
+            {
+                int start = idx;
+                while (idx < span.Length && span[idx] != splitter) idx++;
+                var token = span.Slice(start, idx - start).Trim();
+                if (token.Length == 0)
+                {
+                    idx++; // skip delimiter
+                    continue;
+                }
+                if (!TryParseDouble(token, out _)) return true;
+                if (idx < span.Length && span[idx] == splitter) idx++;
+            }
+            return false;
         }
 
         /// <summary>
@@ -141,7 +262,7 @@ namespace CodeD
         private int SearchBodyBeginLine(string[] data)
         {
             var i = 0;
-            while (ContainsString(data[i]))
+            while (ContainsNonNumeric(data[i]))
             {
                 if (i == data.Length - 1) // When reached the last line
                 {
@@ -174,11 +295,38 @@ namespace CodeD
         /// </summary>
         /// <param name="v">Data for one line of the CSV file</param>
         /// <returns></returns>
-        private bool ContainsString(string v)
+        private bool ContainsNonNumeric(string v)
         {
-            var splitter = new char[] { '\t', ',', ' ' };
-            var tempLine = v.Split(splitter, StringSplitOptions.RemoveEmptyEntries);
-            return ContainsString(tempLine);
+            var span = v.AsSpan();
+            var splitter = GetSplitChar(v);
+            // if the line is empty, consider it non-numeric (part of header)
+            if (span.Trim().IsEmpty) return true;
+
+            int idx = 0;
+            while (idx < span.Length)
+            {
+                int start = idx;
+                while (idx < span.Length && span[idx] != splitter) idx++;
+                var token = span.Slice(start, idx - start).Trim();
+                if (token.Length == 0)
+                {
+                    idx++; // skip delimiter
+                    continue; // skip empty
+                }
+                if (!TryParseDouble(token, out _)) return true;
+                if (idx < span.Length && span[idx] == splitter) idx++;
+            }
+            return false;
+        }
+
+        private static bool TryParseDouble(ReadOnlySpan<char> token, out double val)
+        {
+    #if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER || NET6_0_OR_GREATER || NET7_0_OR_GREATER || NET8_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            return double.TryParse(token, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+    #else
+            // fall back to older frameworks that don't support TryParse(ReadOnlySpan<char>)
+            return double.TryParse(token.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+    #endif
         }
 
         /// <summary>
@@ -202,6 +350,22 @@ namespace CodeD
             }
 
             return containsString;
+        }
+
+        private static int CountTokens(ReadOnlySpan<char> s, char delimiter)
+        {
+            if (s.IsEmpty) return 0;
+            int count = 0;
+            int idx = 0;
+            while (idx < s.Length)
+            {
+                int start = idx;
+                while (idx < s.Length && s[idx] != delimiter) idx++;
+                var token = s.Slice(start, idx - start).Trim();
+                if (token.Length > 0) count++;
+                if (idx < s.Length && s[idx] == delimiter) idx++;
+            }
+            return count;
         }
     }
 }

@@ -5,9 +5,29 @@ Agent は以下の指示を常に優先し、必ず順守してください。
 
 ---
 
-## 0. コーディングルール
+## 0. Branch Handling Rules (Agent must follow)
 
-1. **必ず別ブランチで行うこと。**
+1. Before modifying any file, the Agent must:
+   - Check the current Git branch by executing:  
+     `git branch --show-current`
+   - If the branch name is `main` or `master`, the Agent must **not** start editing.
+
+2. If on `main` or `master`, the Agent must:
+   - Ask the user:  
+     「作業用ブランチを作成してよいですか？  
+       ブランチ名の提案: `feature/<task-summary>`」
+
+3. If the user approves:
+   - Execute the following command in terminal:  
+     `git switch -c feature/<task-summary>`
+   - Confirm that the switch was successful.
+
+4. Only after the branch is successfully created and checked out:
+   - Proceed with file modifications.
+
+5. If branch creation fails:
+   - Show the full terminal output.
+   - Ask the user how to proceed.
 
 ## 1. コミット前の作業プロセス
 
