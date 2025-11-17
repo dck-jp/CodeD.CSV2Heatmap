@@ -42,7 +42,7 @@ namespace CodeD
         public double Max { get; private set; }
         public double Min { get; private set; }
 
-#region Color Index Buffer
+        #region Color Index Buffer
         private int[] _colorIndices = Array.Empty<int>();
 
         private void EnsureColorIndicesBuffer(int width, int height)
@@ -54,7 +54,7 @@ namespace CodeD
                 _colorIndices = new int[needed];
             }
         }
-#endregion
+        #endregion
 
         public HeatmapRenderer(double[,] data, double pixelSize = 0, string header = "")
         {
@@ -194,7 +194,8 @@ namespace CodeD
 
                 default:
                     throw new ApplicationException("Illegal ColorMode");
-            };
+            }
+            ;
         }
 
         private SKBitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
@@ -256,7 +257,7 @@ namespace CodeD
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessBitmapSIMD(SKBitmap bitmap, double min, double max, ConvertMode convertMode)
         {
-            int width  = XSize;
+            int width = XSize;
             int height = YSize;
             EnsureColorIndicesBuffer(width, height); // new only when size changes
             var colorIndices = _colorIndices;
@@ -264,12 +265,12 @@ namespace CodeD
             double scale = range != 0.0 ? 764.0 / range : 0.0;
             double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
             double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
-            
+
             Parallel.For(0, width, x =>
             {
-                int baseIndex  = x * height;
-                int y          = 0;
-                
+                int baseIndex = x * height;
+                int y = 0;
+
                 // SIMD processing: Process multiple elements simultaneously using Vector<double>
                 if (VectorSize > 1 && convertMode == ConvertMode.None)
                 {
@@ -277,7 +278,7 @@ namespace CodeD
                     var zeroVec = Vector<double>.Zero;
                     var scaleVec = new Vector<double>(scale);
                     var minVec = new Vector<double>(min);
-                    
+
                     //for zero allocation in .net standard2.0
                     unsafe
                     {
@@ -299,7 +300,7 @@ namespace CodeD
                         }
                     }
                 }
-                
+
                 // Process remaining elements
                 for (; y < height; y++)
                 {
@@ -325,13 +326,13 @@ namespace CodeD
                     colorIndices[baseIndex + y] = number;
                 }
             });
-            
+
             // Direct access to pixel data for parallelization
             unsafe
             {
                 var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
                 int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
-                
+
                 Parallel.For(0, width, x =>
                 {
                     int baseIndex = x * height;
@@ -339,7 +340,7 @@ namespace CodeD
                     for (int y = 0; y < height; y++)
                     {
                         int idx = baseIndex + y;
-                        var c   = color[colorIndices[idx]];
+                        var c = color[colorIndices[idx]];
                         pixelPtr[y * stride + x] =
                             (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
                     }

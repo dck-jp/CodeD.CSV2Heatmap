@@ -12,5 +12,6 @@ internal class Program
 
         var config = DefaultConfig.Instance.WithArtifactsPath(artifactsPath);
         BenchmarkRunner.Run<HeatmapRendererBenchmarks>(config);
+        BenchmarkRunner.Run<GridCsvParserBenchmarks>(config);
     }
 }

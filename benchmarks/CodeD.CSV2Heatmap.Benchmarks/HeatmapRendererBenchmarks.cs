@@ -9,7 +9,7 @@ public class HeatmapRendererBenchmarks
     private double[,] medium = default!;
     private double[,] large = default!;
     private double[,] xlarge = default!;
-    
+
     private HeatmapRenderer mediumRenderer = default!;
     private HeatmapRenderer largeRenderer = default!;
     private HeatmapRenderer xlargeRenderer = default!;
@@ -20,7 +20,7 @@ public class HeatmapRendererBenchmarks
         medium = MakeData(64, 64, (i, j) => (i * 64 + j) / (64.0 * 64.0 - 1));
         large = MakeData(256, 256, (i, j) => (i * 256 + j) / (256.0 * 256.0 - 1));
         xlarge = MakeData(1024, 1024, (i, j) => (i * 1024 + j) / (1024.0 * 1024.0 - 1));
-        
+
         mediumRenderer = new HeatmapRenderer(medium, 1.0);
         largeRenderer = new HeatmapRenderer(large, 1.0);
         xlargeRenderer = new HeatmapRenderer(xlarge, 1.0);
@@ -38,7 +38,7 @@ public class HeatmapRendererBenchmarks
     public void ToBitmap_XLarge_None_Rainbow()
         => xlargeRenderer.ToBitmap(0, 1.0, HeatmapRenderer.ColorMode.Rainbow, HeatmapRenderer.ConvertMode.None).Dispose();
 
-    
+
 
     [Benchmark]
     public void ToBitmap_Medium_Log_Rainbow()
