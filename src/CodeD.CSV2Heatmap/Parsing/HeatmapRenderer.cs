@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -71,6 +70,25 @@ namespace CodeD
         {
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void GetDataRange(out double minValue, out double maxValue)
+        {
+            minValue = double.MaxValue;
+            maxValue = double.MinValue;
+            var data = Data;
+            int width = XSize;
+            int height = YSize;
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    double value = data[x, y];
+                    if (value < minValue) minValue = value;
+                    if (value > maxValue) maxValue = value;
+                }
+            }
+        }
+
         public static async Task<HeatmapRenderer> CreateAsync(string filename, double pixelSize = 0)
         {
             var renderer = new HeatmapRenderer();
@@ -102,12 +120,24 @@ namespace CodeD
         public SKBitmap ToBitmap(double? min = null, double? max = null, ColorMode colorMode = ColorMode.Rainbow, ConvertMode convertMode = ConvertMode.None)
         {
             CreateColorMap(colorMode);
-            if (min == null) { min = Data.Cast<double>().Min(); }
-            if (max == null) { max = Data.Cast<double>().Max(); }
+
+            double minVal;
+            double maxVal;
+            if (min.HasValue && max.HasValue)
+            {
+                minVal = min.Value;
+                maxVal = max.Value;
+            }
+            else
+            {
+                GetDataRange(out minVal, out maxVal);
+                if (min.HasValue) minVal = min.Value;
+                if (max.HasValue) maxVal = max.Value;
+            }
 
             try
             {
-                if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(min, max, convertMode);
+                if (EnablesOutOfRangeColor) return CreateBitmapWithOutOfRangeColor(minVal, maxVal, convertMode);
 
                 var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
 
@@ -115,13 +145,11 @@ namespace CodeD
                 int totalPixels = XSize * YSize;
                 if (Vector.IsHardwareAccelerated && totalPixels >= 256)
                 {
-                    ProcessBitmapSIMD(bitmap, min.Value, max.Value, convertMode);
+                    ProcessBitmapSIMD(bitmap, minVal, maxVal, convertMode);
                 }
                 else
                 {
                     // Fallback: Traditional processing without delegate overhead
-                    double minVal = min.Value;
-                    double maxVal = max.Value;
                     double range = (maxVal - minVal);
                     double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
                     double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
@@ -198,24 +226,44 @@ namespace CodeD
             ;
         }
 
-        private SKBitmap CreateBitmapWithOutOfRangeColor(double? min, double? max, ConvertMode convertMode)
+        private SKBitmap CreateBitmapWithOutOfRangeColor(double min, double max, ConvertMode convertMode)
         {
             var bitmap = new SKBitmap(XSize, YSize, SKColorType.Rgba8888, SKAlphaType.Opaque);
 
-            Func<int, int, int> calcColor = CreateFormula(min, max, convertMode);
+            double range = (max - min);
+            double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
+            double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
+            double scale = range != 0.0 ? 764.0 / range : 0.0;
             for (int x = 0; x < XSize; x++)
             {
                 for (int y = 0; y < YSize; y++)
                 {
+                    double value = Data[x, y];
                     SKColor _color;
-                    if (Data[x, y] > max || Data[x, y] < min)
+                    if (value > max || value < min)
                     {
                         _color = OutOfRangeColor;
                     }
                     else
                     {
-                        int number = calcColor(x, y);
-                        if (number > 764 || number < 0) number = 0;
+                        int number;
+                        switch (convertMode)
+                        {
+                            case ConvertMode.None:
+                                number = (int)((value - min) * scale);
+                                break;
+                            case ConvertMode.log:
+                                number = (int)(Math.Log(value - min + double.Epsilon) * invDenLog * 764.0);
+                                break;
+                            case ConvertMode.ln:
+                                number = (int)(Math.Log10(value - min + double.Epsilon) * invDenLog10 * 764.0);
+                                break;
+                            default:
+                                number = 0;
+                                break;
+                        }
+                        if (number > 764) number = 764;
+                        else if (number < 0) number = 0;
 
                         _color = color[number];
                     }
@@ -225,30 +273,6 @@ namespace CodeD
             }
 
             return bitmap;
-        }
-
-        private Func<int, int, int> CreateFormula(double? min, double? max, ConvertMode convertMode)
-        {
-            Func<int, int, int> calcColor;
-            switch (convertMode)
-            {
-                case ConvertMode.None:
-                    calcColor = (x, y) => { return (int)((Data[x, y] - min) / (max - min) * 764); };
-                    break;
-
-                case ConvertMode.log:
-                    calcColor = (x, y) => { return (int)(Math.Log(Data[x, y] - (double)min + double.Epsilon) / Math.Log((double)(max - min)) * 764); };
-                    break;
-
-                case ConvertMode.ln:
-                    calcColor = (x, y) => { return (int)(Math.Log10(Data[x, y] - (double)min + double.Epsilon) / Math.Log10((double)(max - min)) * 764); };
-                    break;
-
-                default:
-                    throw new ArgumentException("");
-            }
-
-            return calcColor;
         }
 
         /// <summary>
