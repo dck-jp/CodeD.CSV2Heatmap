@@ -15,11 +15,15 @@ namespace CodeD
     public class HeatmapRenderer
     {
         private static SKColor[] color;
+        private static uint[] packedColor;
 
         // Color map cache to avoid repeated allocation
         private static SKColor[] _rainbowCache;
         private static SKColor[] _monochromeCache;
         private static SKColor[] _blackPurpleWhiteCache;
+        private static uint[] _rainbowPackedCache;
+        private static uint[] _monochromePackedCache;
+        private static uint[] _blackPurpleWhitePackedCache;
 
         // SIMD vector size (pre-calculated for performance)
         private static readonly int VectorSize = Vector<double>.Count;
@@ -149,36 +153,7 @@ namespace CodeD
                 }
                 else
                 {
-                    // Fallback: Traditional processing without delegate overhead
-                    double range = (maxVal - minVal);
-                    double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
-                    double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
-                    double scale = range != 0.0 ? 764.0 / range : 0.0;
-                    for (int x = 0; x < XSize; x++)
-                    {
-                        for (int y = 0; y < YSize; y++)
-                        {
-                            double v = Data[x, y];
-                            int number;
-                            switch (convertMode)
-                            {
-                                case ConvertMode.None:
-                                    number = (int)((v - minVal) * scale);
-                                    break;
-                                case ConvertMode.log:
-                                    number = (int)(Math.Log(v - minVal + double.Epsilon) * invDenLog * 764.0);
-                                    break;
-                                case ConvertMode.ln:
-                                    number = (int)(Math.Log10(v - minVal + double.Epsilon) * invDenLog10 * 764.0);
-                                    break;
-                                default:
-                                    number = 0;
-                                    break;
-                            }
-                            if (number > 764) number = 764; else if (number < 0) number = 0;
-                            bitmap.SetPixel(x, y, color[number]);
-                        }
-                    }
+                    ProcessBitmapScalar(bitmap, minVal, maxVal, convertMode);
                 }
 
                 return bitmap;
@@ -198,8 +173,10 @@ namespace CodeD
                     {
                         _rainbowCache = new SKColor[765];
                         SetRainbowColors(ref _rainbowCache);
+                        _rainbowPackedCache = BuildPackedColors(_rainbowCache);
                     }
                     color = _rainbowCache;
+                    packedColor = _rainbowPackedCache;
                     break;
 
                 case ColorMode.Monochorome:
@@ -209,6 +186,11 @@ namespace CodeD
                         SetMonochromeColors(ref _monochromeCache);
                     }
                     color = _monochromeCache;
+                    if (_monochromePackedCache == null)
+                    {
+                        _monochromePackedCache = BuildPackedColors(_monochromeCache);
+                    }
+                    packedColor = _monochromePackedCache;
                     break;
 
                 case ColorMode.BlackPurpleWhite:
@@ -218,12 +200,29 @@ namespace CodeD
                         SetBlackPurpleWhiteColors(ref _blackPurpleWhiteCache);
                     }
                     color = _blackPurpleWhiteCache;
+                    if (_blackPurpleWhitePackedCache == null)
+                    {
+                        _blackPurpleWhitePackedCache = BuildPackedColors(_blackPurpleWhiteCache);
+                    }
+                    packedColor = _blackPurpleWhitePackedCache;
                     break;
 
                 default:
                     throw new ApplicationException("Illegal ColorMode");
             }
             ;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint[] BuildPackedColors(SKColor[] source)
+        {
+            var packed = new uint[source.Length];
+            for (int i = 0; i < source.Length; i++)
+            {
+                var c = source[i];
+                packed[i] = (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
+            }
+            return packed;
         }
 
         private SKBitmap CreateBitmapWithOutOfRangeColor(double min, double max, ConvertMode convertMode)
@@ -234,42 +233,47 @@ namespace CodeD
             double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
             double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
             double scale = range != 0.0 ? 764.0 / range : 0.0;
-            for (int x = 0; x < XSize; x++)
+            uint outOfRangePacked = (uint)((OutOfRangeColor.Alpha << 24) | (OutOfRangeColor.Blue << 16) | (OutOfRangeColor.Green << 8) | OutOfRangeColor.Red);
+            double logOffset = -min + double.Epsilon;
+
+            unsafe
             {
-                for (int y = 0; y < YSize; y++)
+                var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
+                int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
+
+                Parallel.For(0, YSize, y =>
                 {
-                    double value = Data[x, y];
-                    SKColor _color;
-                    if (value > max || value < min)
+                    uint* rowPtr = pixelPtr + (y * stride);
+                    for (int x = 0; x < XSize; x++)
                     {
-                        _color = OutOfRangeColor;
-                    }
-                    else
-                    {
-                        int number;
-                        switch (convertMode)
+                        double value = Data[x, y];
+                        if (value > max || value < min)
                         {
-                            case ConvertMode.None:
-                                number = (int)((value - min) * scale);
-                                break;
-                            case ConvertMode.log:
-                                number = (int)(Math.Log(value - min + double.Epsilon) * invDenLog * 764.0);
-                                break;
-                            case ConvertMode.ln:
-                                number = (int)(Math.Log10(value - min + double.Epsilon) * invDenLog10 * 764.0);
-                                break;
-                            default:
-                                number = 0;
-                                break;
+                            rowPtr[x] = outOfRangePacked;
                         }
-                        if (number > 764) number = 764;
-                        else if (number < 0) number = 0;
-
-                        _color = color[number];
+                        else if (convertMode == ConvertMode.None)
+                        {
+                            int number = (int)((value - min) * scale);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            rowPtr[x] = packedColor[number];
+                        }
+                        else if (convertMode == ConvertMode.log)
+                        {
+                            int number = (int)(Math.Log(value + logOffset) * invDenLog * 764.0);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            rowPtr[x] = packedColor[number];
+                        }
+                        else // ln
+                        {
+                            int number = (int)(Math.Log10(value + logOffset) * invDenLog10 * 764.0);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            rowPtr[x] = packedColor[number];
+                        }
                     }
-
-                    bitmap.SetPixel(x, y, _color);
-                }
+                });
             }
 
             return bitmap;
@@ -283,34 +287,34 @@ namespace CodeD
         {
             int width = XSize;
             int height = YSize;
-            EnsureColorIndicesBuffer(width, height); // new only when size changes
-            var colorIndices = _colorIndices;
             double range = (max - min);
             double scale = range != 0.0 ? 764.0 / range : 0.0;
             double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
             double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
+            double logOffset = -min + double.Epsilon;
+            var packed = packedColor;
 
-            Parallel.For(0, width, x =>
+            unsafe
             {
-                int baseIndex = x * height;
-                int y = 0;
+                var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
+                int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
 
-                // SIMD processing: Process multiple elements simultaneously using Vector<double>
-                if (VectorSize > 1 && convertMode == ConvertMode.None)
+                Parallel.For(0, width, x =>
                 {
-                    var maxIdxVec = new Vector<double>(764.0);
-                    var zeroVec = Vector<double>.Zero;
-                    var scaleVec = new Vector<double>(scale);
-                    var minVec = new Vector<double>(min);
+                    int y = 0;
+                    uint* columnPtr = pixelPtr + x;
 
-                    //for zero allocation in .net standard2.0
-                    unsafe
+                    // SIMD processing: Process multiple elements simultaneously using Vector<double>
+                    if (VectorSize > 1 && convertMode == ConvertMode.None)
                     {
+                        var maxIdxVec = new Vector<double>(764.0);
+                        var zeroVec = Vector<double>.Zero;
+                        var scaleVec = new Vector<double>(scale);
+                        var minVec = new Vector<double>(min);
+
                         fixed (double* ptr = &Data[x, 0])
                         {
-                            Span<double> values = stackalloc double[8];
-                            int vectorSize = VectorSize > values.Length ? values.Length : VectorSize;
-
+                            int vectorSize = VectorSize;
                             for (; y <= height - vectorSize; y += vectorSize)
                             {
                                 var vec = Unsafe.Read<Vector<double>>(ptr + y);
@@ -319,56 +323,115 @@ namespace CodeD
                                 // Clamp to [0, 764]
                                 vec = Vector.Min(Vector.Max(vec, zeroVec), maxIdxVec);
                                 for (int v = 0; v < vectorSize; v++)
-                                    colorIndices[baseIndex + y + v] = (int)vec[v];
+                                {
+                                    int number = (int)vec[v];
+                                    columnPtr[(y + v) * stride] = packed[number];
+                                }
                             }
                         }
                     }
-                }
 
-                // Process remaining elements
-                for (; y < height; y++)
-                {
-                    double v = Data[x, y];
-                    int number;
-                    switch (convertMode)
+                    // Process remaining elements (scalar tail / non-None modes)
+                    if (convertMode == ConvertMode.None)
                     {
-                        case ConvertMode.None:
-                            number = (int)((v - min) * scale);
-                            break;
-                        case ConvertMode.log:
-                            number = (int)(Math.Log(v - min + double.Epsilon) * invDenLog * 764.0);
-                            break;
-                        case ConvertMode.ln:
-                            number = (int)(Math.Log10(v - min + double.Epsilon) * invDenLog10 * 764.0);
-                            break;
-                        default:
-                            number = 0;
-                            break;
+                        for (; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)((v - min) * scale);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
                     }
-                    if (number > 764) number = 764;
-                    else if (number < 0) number = 0;
-                    colorIndices[baseIndex + y] = number;
-                }
-            });
+                    else if (convertMode == ConvertMode.log)
+                    {
+                        double invScale = invDenLog * 764.0;
+                        for (; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)(Math.Log(v + logOffset) * invScale);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
+                    }
+                    else if (convertMode == ConvertMode.ln)
+                    {
+                        double invScale = invDenLog10 * 764.0;
+                        for (; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)(Math.Log10(v + logOffset) * invScale);
+                            if (number > 764) number = 764;
+                            else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
+                    }
+                });
+            }
+        }
 
-            // Direct access to pixel data for parallelization
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessBitmapScalar(SKBitmap bitmap, double min, double max, ConvertMode convertMode)
+        {
+            int width = XSize;
+            int height = YSize;
+            var packed = packedColor;
+            double range = (max - min);
+            double invDenLog = range > 0 ? 1.0 / Math.Log(range) : 0.0;
+            double invDenLog10 = range > 0 ? 1.0 / Math.Log10(range) : 0.0;
+            double scale = range != 0.0 ? 764.0 / range : 0.0;
+            double logOffset = -min + double.Epsilon;
+
             unsafe
             {
                 var pixelPtr = (uint*)bitmap.GetPixels().ToPointer();
                 int stride = bitmap.RowBytes / 4; // 4 bytes per pixel (RGBA8888)
 
-                Parallel.For(0, width, x =>
+                if (convertMode == ConvertMode.None)
                 {
-                    int baseIndex = x * height;
-
-                    for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
                     {
-                        int idx = baseIndex + y;
-                        var c = color[colorIndices[idx]];
-                        pixelPtr[y * stride + x] =
-                            (uint)((c.Alpha << 24) | (c.Blue << 16) | (c.Green << 8) | c.Red);
+                        uint* columnPtr = pixelPtr + x;
+                        for (int y = 0; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)((v - min) * scale);
+                            if (number > 764) number = 764; else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
                     }
-                });
+                }
+                else if (convertMode == ConvertMode.log)
+                {
+                    double invScale = invDenLog * 764.0;
+                    for (int x = 0; x < width; x++)
+                    {
+                        uint* columnPtr = pixelPtr + x;
+                        for (int y = 0; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)(Math.Log(v + logOffset) * invScale);
+                            if (number > 764) number = 764; else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
+                    }
+                }
+                else if (convertMode == ConvertMode.ln)
+                {
+                    double invScale = invDenLog10 * 764.0;
+                    for (int x = 0; x < width; x++)
+                    {
+                        uint* columnPtr = pixelPtr + x;
+                        for (int y = 0; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)(Math.Log10(v + logOffset) * invScale);
+                            if (number > 764) number = 764; else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
+                    }
+                }
             }
         }
 
