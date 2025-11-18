@@ -113,7 +113,7 @@ Available in `samples/`:
 - `xyz_sample.txt`
 - `xyz_sample2.txt`
 
-See `samples/README.md` for details.
+See the `samples/` folder for details.
 
 ## Tests
 

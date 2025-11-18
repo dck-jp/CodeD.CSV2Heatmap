@@ -9,7 +9,7 @@ using CodeD;
 using SkiaSharp;
 
 // Load Grid Data asynchronously
-var heatmap = await HeatmapRenderer.CreateAsync("grid_sample.txt");
+var heatmap = await HeatmapRenderer.CreateAsync("samples/grid_sample_simple.txt");
 
 // Convert to bitmap
 SKBitmap bitmap = heatmap.ToBitmap(

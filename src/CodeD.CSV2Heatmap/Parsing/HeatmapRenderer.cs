@@ -260,14 +260,14 @@ namespace CodeD
                         }
                         else if (convertMode == ConvertMode.log)
                         {
-                            int number = (int)(Math.Log(value + logOffset) * invDenLog * 764.0);
+                            int number = (int)(Math.Log10(value + logOffset) * invDenLog10 * 764.0);
                             if (number > 764) number = 764;
                             else if (number < 0) number = 0;
                             rowPtr[x] = packedColor[number];
                         }
-                        else // ln
+                        else // ln (natural log)
                         {
-                            int number = (int)(Math.Log10(value + logOffset) * invDenLog10 * 764.0);
+                            int number = (int)(Math.Log(value + logOffset) * invDenLog * 764.0);
                             if (number > 764) number = 764;
                             else if (number < 0) number = 0;
                             rowPtr[x] = packedColor[number];
@@ -345,11 +345,11 @@ namespace CodeD
                     }
                     else if (convertMode == ConvertMode.log)
                     {
-                        double invScale = invDenLog * 764.0;
+                        double invScale = invDenLog10 * 764.0;
                         for (; y < height; y++)
                         {
                             double v = Data[x, y];
-                            int number = (int)(Math.Log(v + logOffset) * invScale);
+                            int number = (int)(Math.Log10(v + logOffset) * invScale);
                             if (number > 764) number = 764;
                             else if (number < 0) number = 0;
                             columnPtr[y * stride] = packed[number];
@@ -357,11 +357,11 @@ namespace CodeD
                     }
                     else if (convertMode == ConvertMode.ln)
                     {
-                        double invScale = invDenLog10 * 764.0;
+                        double invScale = invDenLog * 764.0;
                         for (; y < height; y++)
                         {
                             double v = Data[x, y];
-                            int number = (int)(Math.Log10(v + logOffset) * invScale);
+                            int number = (int)(Math.Log(v + logOffset) * invScale);
                             if (number > 764) number = 764;
                             else if (number < 0) number = 0;
                             columnPtr[y * stride] = packed[number];
@@ -404,21 +404,6 @@ namespace CodeD
                 }
                 else if (convertMode == ConvertMode.log)
                 {
-                    double invScale = invDenLog * 764.0;
-                    for (int x = 0; x < width; x++)
-                    {
-                        uint* columnPtr = pixelPtr + x;
-                        for (int y = 0; y < height; y++)
-                        {
-                            double v = Data[x, y];
-                            int number = (int)(Math.Log(v + logOffset) * invScale);
-                            if (number > 764) number = 764; else if (number < 0) number = 0;
-                            columnPtr[y * stride] = packed[number];
-                        }
-                    }
-                }
-                else if (convertMode == ConvertMode.ln)
-                {
                     double invScale = invDenLog10 * 764.0;
                     for (int x = 0; x < width; x++)
                     {
@@ -427,6 +412,21 @@ namespace CodeD
                         {
                             double v = Data[x, y];
                             int number = (int)(Math.Log10(v + logOffset) * invScale);
+                            if (number > 764) number = 764; else if (number < 0) number = 0;
+                            columnPtr[y * stride] = packed[number];
+                        }
+                    }
+                }
+                else if (convertMode == ConvertMode.ln)
+                {
+                    double invScale = invDenLog * 764.0;
+                    for (int x = 0; x < width; x++)
+                    {
+                        uint* columnPtr = pixelPtr + x;
+                        for (int y = 0; y < height; y++)
+                        {
+                            double v = Data[x, y];
+                            int number = (int)(Math.Log(v + logOffset) * invScale);
                             if (number > 764) number = 764; else if (number < 0) number = 0;
                             columnPtr[y * stride] = packed[number];
                         }
