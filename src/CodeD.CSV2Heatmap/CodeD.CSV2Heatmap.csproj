@@ -8,9 +8,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     
     <!-- Version Information -->
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     
     <!-- Package Metadata -->
     <Authors>dck-jp</Authors>
@@ -25,7 +25,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v1.1.0: Major performance improvements - SIMD vectorization, parallel processing, zero-allocation optimizations, color map caching, and ConvertMode-specific fast paths. Speed: +12-70% (Large +48%, XLarge +37%, Ln +70%). Memory: -63% to -99.7%. v1.0.2: Fixed deadlock issues. v1.0.1: Updated README. v1.0.0: Initial release.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.2.0: Fixed ConvertMode log/ln mapping (log10 vs natural log); aligned README/USAGE/NuGet samples with shipped API; restored zero-allocation GridCsvParser/XyzCsvParser (row-major buffer, lazy Data, buffer extraction APIs). v1.1.0: Major performance improvements - SIMD vectorization, parallel processing, zero-allocation optimizations, color map caching, and ConvertMode-specific fast paths. Speed: +12-70% (Large +48%, XLarge +37%, Ln +70%). Memory: -63% to -99.7%. v1.0.2: Fixed deadlock issues. v1.0.1: Updated README. v1.0.0: Initial release.</PackageReleaseNotes>
     
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
